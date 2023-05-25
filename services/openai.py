@@ -74,3 +74,20 @@ def get_chat_completion(
     completion = choices[0].message.content.strip()
     print(f"Completion: {completion}")
     return completion
+
+# @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(3))
+def get_completion(
+    prompt,
+    model="text-davinci-003",
+):
+    response = openai.Completion.create(
+        model=model,
+        prompt=prompt,
+        temperature=0,
+        max_tokens=512,
+    )
+
+    choices = response["choices"]  # type: ignore
+    completion = choices[0].text.strip()
+    print(f"Completion: {completion}")
+    return completion

@@ -32,3 +32,12 @@ class DeleteRequest(BaseModel):
 
 class DeleteResponse(BaseModel):
     success: bool
+
+
+class ChatRequest(BaseModel):
+    question: str
+    model: Optional[str] = "gpt-3.5-turbo"
+
+class ChatResponse(BaseModel):
+    response: str
+    model: Optional[str] = "gpt-3.5-turbo"

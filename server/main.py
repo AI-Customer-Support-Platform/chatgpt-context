@@ -12,11 +12,14 @@ from models.api import (
     QueryResponse,
     UpsertRequest,
     UpsertResponse,
+    ChatRequest,
+    ChatResponse,
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
+from services.chat import generate_chat_response
 
-from models.models import DocumentMetadata, Source
+from models.models import DocumentMetadata, Source, Query
 
 bearer_scheme = HTTPBearer()
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
@@ -120,6 +123,25 @@ async def query(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
+@app.post("/chat", response_model=ChatResponse)
+async def chat(
+    request: ChatRequest = Body(...),
+):
+    # try:
+    query_results = await datastore.query(
+        [Query(query=request.question, topK=1)],
+    )
+    
+    chat_response = generate_chat_response(
+        context=query_results[0].results[0].text,
+        question=request.question,
+        model=request.model,
+    )
+
+    return ChatResponse(response=chat_response, model=request.model)
+    # except Exception as e:
+    #     print("Error:", e)
+    #     raise HTTPException(status_code=500, detail="Internal Service Error") 
 
 @app.delete(
     "/delete",
