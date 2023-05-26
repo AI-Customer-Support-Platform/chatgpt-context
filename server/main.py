@@ -14,7 +14,6 @@ from models.api import (
     UpsertResponse,
     ChatRequest,
     ChatResponse,
-    CreateCollectionRequest,
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
@@ -48,13 +47,13 @@ app.mount("/sub", sub_app)
 
 
 @app.post(
-    "/upsert-file",
+    "/upsert-file/{collection}",
     response_model=UpsertResponse,
 )
 async def upsert_file(
+    collection: str,
     file: UploadFile = File(...),
     metadata: Optional[str] = Form(None),
-    collection: Optional[str] = Form(None),
 ):
     try:
         metadata_obj = (
@@ -91,16 +90,17 @@ async def upsert(
 
 
 @app.post(
-    "/query",
+    "/query/{collection}",
     response_model=QueryResponse,
 )
 async def query_main(
+    collection: str,
     request: QueryRequest = Body(...),
 ):
     try:
         results = await datastore.query(
             request.queries,
-            request.collection
+            collection
         )
         return QueryResponse(results=results)
     except Exception as e:
@@ -126,14 +126,15 @@ async def query(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat/{collection}", response_model=ChatResponse)
 async def chat(
+    collection: str,
     request: ChatRequest = Body(...),
 ):
     # try:
     query_results = await datastore.query(
         [Query(query=request.question, topK=1)],
-        request.collection
+        collection
     )
     
     chat_response = generate_chat_response(
@@ -148,10 +149,11 @@ async def chat(
     #     raise HTTPException(status_code=500, detail="Internal Service Error") 
 
 @app.delete(
-    "/delete",
+    "/delete/{collection}",
     response_model=DeleteResponse,
 )
 async def delete(
+    collection: str,
     request: DeleteRequest = Body(...),
 ):
     if not (request.ids or request.filter or request.delete_all):
@@ -164,6 +166,7 @@ async def delete(
             ids=request.ids,
             filter=request.filter,
             delete_all=request.delete_all,
+            collection_name=collection
         )
         return DeleteResponse(success=success)
     except Exception as e:
@@ -171,11 +174,11 @@ async def delete(
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @app.put(
-    "/collection",
+    "/collection/{collection}",
     response_model=DeleteResponse,
 )
 def creat_collection(
-    request: CreateCollectionRequest = Body(...),
+    collection: str,
 ):
     try:
         flag = datastore.create_collection(request.name)
