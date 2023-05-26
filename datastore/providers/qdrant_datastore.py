@@ -115,11 +115,13 @@ class QdrantDataStore(DataStore):
         ids: Optional[List[str]] = None,
         filter: Optional[DocumentMetadataFilter] = None,
         delete_all: Optional[bool] = None,
+        collection_name: Optional[str] = None,
     ) -> bool:
         """
         Removes vectors by ids, filter, or everything in the datastore.
         Returns whether the operation was successful.
         """
+        collection = collection_name if collection_name is not None else self.collection_name
         if ids is None and filter is None and delete_all is None:
             raise ValueError(
                 "Please provide one of the parameters: ids, filter or delete_all."
@@ -133,7 +135,7 @@ class QdrantDataStore(DataStore):
             )
 
         response = self.client.delete(
-            collection_name=self.collection_name,
+            collection_name=collection,
             points_selector=points_selector,  # type: ignore
         )
         return "COMPLETED" == response.status

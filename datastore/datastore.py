@@ -77,6 +77,7 @@ class DataStore(ABC):
         ids: Optional[List[str]] = None,
         filter: Optional[DocumentMetadataFilter] = None,
         delete_all: Optional[bool] = None,
+        collection_name: Optional[str] = None,
     ) -> bool:
         """
         Removes vectors by ids, filter, or everything in the datastore.
