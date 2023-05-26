@@ -131,22 +131,22 @@ async def chat(
     collection: str,
     request: ChatRequest = Body(...),
 ):
-    # try:
-    query_results = await datastore.query(
-        [Query(query=request.question, topK=1)],
-        collection
-    )
-    
-    chat_response = generate_chat_response(
-        context=query_results[0].results[0].text,
-        question=request.question,
-        model=request.model,
-    )
+    try:
+        query_results = await datastore.query(
+            [Query(query=request.question, topK=1)],
+            collection
+        )
+        
+        chat_response = generate_chat_response(
+            context=query_results[0].results[0].text,
+            question=request.question,
+            model=request.model,
+        )
 
-    return ChatResponse(response=chat_response, model=request.model)
-    # except Exception as e:
-    #     print("Error:", e)
-    #     raise HTTPException(status_code=500, detail="Internal Service Error") 
+        return ChatResponse(response=chat_response, model=request.model)
+    except Exception as e:
+        print("Error:", e)
+        raise HTTPException(status_code=500, detail="Internal Service Error") 
 
 @app.delete(
     "/delete/{collection}",
@@ -181,7 +181,7 @@ def creat_collection(
     collection: str,
 ):
     try:
-        flag = datastore.create_collection(request.name)
+        flag = datastore.create_collection(collection)
         if flag:
             return DeleteResponse(success=True)
         else:
