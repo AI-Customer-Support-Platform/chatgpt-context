@@ -18,6 +18,7 @@ class UpsertResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     queries: List[Query]
+    collection: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
@@ -36,8 +37,12 @@ class DeleteResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
+    collection: Optional[str] = None
     model: Optional[str] = "gpt-3.5-turbo"
 
 class ChatResponse(BaseModel):
     response: str
     model: Optional[str] = "gpt-3.5-turbo"
+
+class CreateCollectionRequest(BaseModel):
+    name: str

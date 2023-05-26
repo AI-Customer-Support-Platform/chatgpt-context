@@ -58,18 +58,24 @@ class QdrantDataStore(DataStore):
         # Set up the collection so the points might be inserted or queried
         self._set_up_collection(vector_size, distance, recreate_collection)
 
-    async def _upsert(self, chunks: Dict[str, List[DocumentChunk]]) -> List[str]:
+    async def _upsert(
+        self, 
+        chunks: Dict[str, List[DocumentChunk]], 
+        collection_name: Optional[str] = None
+    ) -> List[str]:
         """
         Takes in a list of document chunks and inserts them into the database.
         Return a list of document ids.
         """
+        collection = collection_name if collection_name is not None else self.collection_name
+
         points = [
             self._convert_document_chunk_to_point(chunk)
             for _, chunks in chunks.items()
             for chunk in chunks
         ]
         self.client.upsert(
-            collection_name=self.collection_name,
+            collection_name=collection,
             points=points,  # type: ignore
             wait=True,
         )
@@ -78,6 +84,7 @@ class QdrantDataStore(DataStore):
     async def _query(
         self,
         queries: List[QueryWithEmbedding],
+        collection_name: Optional[str] = None,
     ) -> List[QueryResult]:
         """
         Takes in a list of queries with embeddings and filters and returns a list of query results with matching document chunks and scores.
@@ -85,8 +92,11 @@ class QdrantDataStore(DataStore):
         search_requests = [
             self._convert_query_to_search_request(query) for query in queries
         ]
+
+        collection = collection_name if collection_name is not None else self.collection_name
+
         results = self.client.search_batch(
-            collection_name=self.collection_name,
+            collection_name=collection,
             requests=search_requests,
         )
         return [
@@ -282,6 +292,34 @@ class QdrantDataStore(DataStore):
 
         # Create the payload index for the document_id metadata attribute, as it is
         # used to delete the document related entries
+        self.client.create_payload_index(
+            self.collection_name,
+            field_name="metadata.document_id",
+            field_type=PayloadSchemaType.KEYWORD,
+        )
+
+        # Create the payload index for the created_at attribute, to make the lookup
+        # by range filters faster
+        self.client.create_payload_index(
+            self.collection_name,
+            field_name="created_at",
+            field_schema=PayloadSchemaType.INTEGER,
+        )
+
+    def _create_collection(
+        self,
+        collection_name: str,
+        vector_size: int = 1536, 
+        distance: str = "Cosine", 
+    ):
+        self.client.create_collection(
+            collection_name,
+            vectors_config=rest.VectorParams(
+                size=vector_size,
+                distance=distance,
+            ),
+        )
+
         self.client.create_payload_index(
             self.collection_name,
             field_name="metadata.document_id",

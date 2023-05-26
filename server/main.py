@@ -14,6 +14,7 @@ from models.api import (
     UpsertResponse,
     ChatRequest,
     ChatResponse,
+    CreateCollectionRequest,
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
@@ -53,6 +54,7 @@ app.mount("/sub", sub_app)
 async def upsert_file(
     file: UploadFile = File(...),
     metadata: Optional[str] = Form(None),
+    collection: Optional[str] = Form(None),
 ):
     try:
         metadata_obj = (
@@ -66,12 +68,12 @@ async def upsert_file(
     document = await get_document_from_file(file, metadata_obj)
 
     try:
-        ids = await datastore.upsert([document])
+        ids = await datastore.upsert([document], collection_name=collection)
         return UpsertResponse(ids=ids)
     except Exception as e:
         print("Error:", e)
         raise HTTPException(status_code=500, detail=f"str({e})")
-
+    
 
 @app.post(
     "/upsert",
@@ -98,6 +100,7 @@ async def query_main(
     try:
         results = await datastore.query(
             request.queries,
+            request.collection
         )
         return QueryResponse(results=results)
     except Exception as e:
@@ -130,6 +133,7 @@ async def chat(
     # try:
     query_results = await datastore.query(
         [Query(query=request.question, topK=1)],
+        request.collection
     )
     
     chat_response = generate_chat_response(
@@ -166,6 +170,22 @@ async def delete(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
+@app.put(
+    "/collection",
+    response_model=DeleteResponse,
+)
+def creat_collection(
+    request: CreateCollectionRequest = Body(...),
+):
+    try:
+        flag = datastore.create_collection(request.name)
+        if flag:
+            return DeleteResponse(success=True)
+        else:
+            return DeleteResponse(success=False)
+    except Exception as e:
+        print("Error:", e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @app.on_event("startup")
 async def startup():
