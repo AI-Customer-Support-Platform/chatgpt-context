@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, Depends, Body, UploadFile
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, Form, HTTPException, Depends, Body, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 
@@ -17,7 +17,7 @@ from models.api import (
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
-from services.chat import generate_chat_response
+from services.chat import generate_chat_response, get_stream_answer_from_chatgpt
 
 from models.models import DocumentMetadata, Source, Query
 
@@ -75,14 +75,15 @@ async def upsert_file(
     
 
 @app.post(
-    "/upsert",
+    "/upsert/{collection}",
     response_model=UpsertResponse,
 )
 async def upsert(
+    collection: str,
     request: UpsertRequest = Body(...),
 ):
     try:
-        ids = await datastore.upsert(request.documents)
+        ids = await datastore.upsert(request.documents, collection_name=collection)
         return UpsertResponse(ids=ids)
     except Exception as e:
         print("Error:", e)
