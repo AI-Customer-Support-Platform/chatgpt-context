@@ -18,7 +18,7 @@ from models.api import (
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
-from services.chat import generate_chat_response, get_stream_answer_from_chatgpt
+from services.chat import generate_chat_response
 
 from models.models import DocumentMetadata, Source, Query
 
