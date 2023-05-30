@@ -18,7 +18,7 @@ from models.api import (
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
-from services.chat import generate_chat_response
+from services.chat import generate_chat_response, generate_chat_response_async
 
 from models.models import DocumentMetadata, Source, Query
 
@@ -199,6 +199,36 @@ def creat_collection(
     except Exception as e:
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
+
+@app.websocket("/ws/{collection}")
+async def websocket_endpoint(collection: str, websocket: WebSocket):
+    await websocket.accept()
+    
+    # print(f"WebSocket Connected: {websocket.headers['Authorization']}")
+    if websocket.headers['Authorization'] != f"Bearer {BEARER_TOKEN}":
+        await websocket.close(1008, "errors.unauthorized")
+        return
+    try:
+        params = await websocket.receive_json()
+    except WebSocketDisconnect:
+        return
+
+    try:
+        ask_request = ChatRequest(**params)
+    except:
+        await websocket.close(1007, "errors.invalidAskRequest")
+        return
+
+    query_results = await datastore.query(
+        [Query(query=ask_request.question, topK=5)],
+        collection
+    )
+    async for data in generate_chat_response_async(
+        context=query_results[0].results, 
+        question=ask_request.question):
+        await websocket.send_text(data)
+
+    await websocket.close()
 
 @app.on_event("startup")
 async def startup():
