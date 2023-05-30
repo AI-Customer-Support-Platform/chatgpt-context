@@ -143,12 +143,12 @@ async def chat(
 ):
     try:
         query_results = await datastore.query(
-            [Query(query=request.question, topK=1)],
+            [Query(query=request.question, topK=5)],
             collection
         )
         
         chat_response = generate_chat_response(
-            context=query_results[0].results[0].text,
+            context=query_results[0].results,
             question=request.question,
             model=request.model,
         )
