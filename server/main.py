@@ -1,4 +1,5 @@
 import os
+import json
 from typing import Optional
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, Form, HTTPException, Depends, Body, UploadFile
@@ -205,12 +206,22 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
     await websocket.accept()
     
     # print(f"WebSocket Connected: {websocket.headers['Authorization']}")
-    if websocket.headers['Authorization'] != f"Bearer {BEARER_TOKEN}":
+    # if websocket.headers['Authorization'] != f"Bearer {BEARER_TOKEN}":
+    #     await websocket.close(1008, "errors.unauthorized")
+    #     return
+    auth = await websocket.receive_text()
+    if auth != f"Bearer {BEARER_TOKEN}":
         await websocket.close(1008, "errors.unauthorized")
         return
+    else:
+        await websocket.send_text(f"Authorized")
+
     try:
         params = await websocket.receive_json()
     except WebSocketDisconnect:
+        return
+    except json.decoder.JSONDecodeError:
+        await websocket.close()
         return
 
     try:
