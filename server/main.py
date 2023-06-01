@@ -1,8 +1,16 @@
 import os
 import json
-from typing import Optional
+import uuid
+from typing import Optional, Annotated
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, Form, HTTPException, Depends, Body, UploadFile
+from fastapi import (
+    FastAPI, 
+    WebSocket, WebSocketDisconnect, 
+    File, Form, HTTPException, 
+    Depends, Body, UploadFile,
+    Cookie,
+    Response
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,10 +24,11 @@ from models.api import (
     UpsertResponse,
     ChatRequest,
     ChatResponse,
+    ChatHistoryResponse
 )
-from datastore.factory import get_datastore
+from datastore.factory import get_datastore, get_redis
 from services.file import get_document_from_file
-from services.chat import generate_chat_response, generate_chat_response_async
+from services.chat import generate_chat_response, generate_chat_response_async, history_to_query
 
 from models.models import DocumentMetadata, Source, Query
 
@@ -137,6 +146,33 @@ async def query(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
+@app.get("/history/", response_model=ChatHistoryResponse)
+async def chat_history(response: Response, user_id:  str | None = Cookie(default=None)):
+    if user_id is None:
+        user_id = str(uuid.uuid4())
+        response.set_cookie(key="user_id", value=user_id)
+        return ChatHistoryResponse(
+            user_id=user_id,
+            history=[],
+            exist=False
+        )
+    else:
+        user_bytes = uuid.UUID(user_id).bytes
+
+        if cache.user_exists(user_bytes):
+            history = cache.get_qa_history(user_bytes)
+            exist_flag = True
+
+        else:
+            history = []
+            exist_flag = False
+
+        return ChatHistoryResponse(
+            user_id=user_id, 
+            history=history, 
+            exist=exist_flag
+        )
+
 @app.post("/chat/{collection}", response_model=ChatResponse)
 async def chat(
     collection: str,
@@ -204,47 +240,64 @@ def creat_collection(
 @app.websocket("/ws/{collection}")
 async def websocket_endpoint(collection: str, websocket: WebSocket):
     await websocket.accept()
-    
-    # print(f"WebSocket Connected: {websocket.headers['Authorization']}")
-    # if websocket.headers['Authorization'] != f"Bearer {BEARER_TOKEN}":
-    #     await websocket.close(1008, "errors.unauthorized")
-    #     return
+
     auth = await websocket.receive_text()
     if auth != f"Bearer {BEARER_TOKEN}":
         await websocket.close(1008, "errors.unauthorized")
         return
     else:
-        await websocket.send_text(f"Authorized")
+        await websocket.send_text(f"Hi,how can I help you?")
 
-    try:
-        params = await websocket.receive_json()
-    except WebSocketDisconnect:
-        return
-    except json.decoder.JSONDecodeError:
-        await websocket.close()
-        return
+    user_id = await websocket.receive_text()
+    user_uuid = uuid.UUID(user_id).bytes
+    await websocket.send_text("OK")
 
-    try:
-        ask_request = ChatRequest(**params)
-    except:
-        await websocket.close(1007, "errors.invalidAskRequest")
-        return
+    while True:
+        try:
+            params = await websocket.receive_json()
+        except WebSocketDisconnect:
+            return
+        except json.decoder.JSONDecodeError:
+            await websocket.close()
+            return
 
-    query_results = await datastore.query(
-        [Query(query=ask_request.question, topK=5)],
-        collection
-    )
-    async for data in generate_chat_response_async(
-        context=query_results[0].results, 
-        question=ask_request.question):
-        await websocket.send_text(data)
+        try:
+            ask_request = ChatRequest(**params)
+            question = ask_request.question
+        except:
+            await websocket.close(1007, "errors.invalidAskRequest")
+            return
 
-    await websocket.close()
+        if cache.user_exists(user_uuid):
+            question = history_to_query(question, cache.get_chat_history(user_uuid))
+
+        query_results = await datastore.query(
+            [Query(query=question, topK=3)],
+            collection
+        )
+
+        async for data in generate_chat_response_async(
+            context=query_results[0].results, 
+            question=question):
+
+            await websocket.send_text(data)
+
+        cache.set_chat_history(user_uuid, {
+            "user_question": ask_request.question,
+            "query": f"<search>{question}</search>",
+            "background": f"<result>{query_results[0].results[0].text}</result>",
+            "answer": data
+        })
+
+        await websocket.send_text("END")
 
 @app.on_event("startup")
 async def startup():
     global datastore
     datastore = await get_datastore()
+
+    global cache
+    cache = await get_redis()
 
 
 def start():

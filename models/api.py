@@ -2,8 +2,9 @@ from models.models import (
     Document,
     DocumentMetadataFilter,
     Query,
-    QueryResult,
+    QueryResult
 )
+from models.chat_history import QAHistory
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -42,3 +43,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     model: Optional[str] = "gpt-3.5-turbo"
+
+class ChatHistoryResponse(BaseModel):
+    user_id: str
+    exist: bool = False
+    history: List[QAHistory]
