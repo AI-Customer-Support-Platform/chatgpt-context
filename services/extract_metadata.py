@@ -28,7 +28,7 @@ def extract_metadata_from_document(text: str) -> Dict[str, str]:
     # Read environment variable - if not set - not used
     completion = get_chat_completion(
         messages,
-        "gpt-4",
+        "gpt-3.5-turbo",
         os.environ.get("OPENAI_METADATA_EXTRACTIONMODEL_DEPLOYMENTID")
     )  # TODO: change to your preferred model name
 
