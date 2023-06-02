@@ -270,6 +270,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
         if cache.user_exists(user_uuid):
             question = history_to_query(question, cache.get_chat_history(user_uuid))
+            print(question)
 
         query_results = await datastore.query(
             [Query(query=question, topK=3)],
