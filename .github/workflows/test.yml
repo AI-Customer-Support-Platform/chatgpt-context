@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - test
+  
+  pull_request:
+    branches:
+      - test
+
 
 env:
   UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
