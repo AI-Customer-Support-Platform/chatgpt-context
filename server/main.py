@@ -253,11 +253,12 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
     if auth_metadata.auth != f"Bearer {BEARER_TOKEN}":
         await websocket.close(1002, "errors.unauthorized")
         return
+
     try:
-        gretting = i18n_adapter.get_greetings(language=auth_metadata.language)
+        gretting = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="greetings")
         await websocket.send_text(gretting)
     except ValueError:
-        gretting = i18n_adapter.get_greetings(language="en")
+        gretting = i18n_adapter.get_message(language="en", message="greetings")
         await websocket.send_text(gretting)
 
     user_id = await websocket.receive_text()
