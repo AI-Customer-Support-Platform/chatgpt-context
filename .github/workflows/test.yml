@@ -7,6 +7,7 @@ on:
 
 env:
   UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
+  BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
   
 jobs:
   test:
