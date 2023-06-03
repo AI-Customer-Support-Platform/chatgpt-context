@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from enum import Enum
+from models.i18n import i18n
 
 
 class Source(str, Enum):
@@ -64,3 +65,8 @@ class QueryWithEmbedding(Query):
 class QueryResult(BaseModel):
     query: str
     results: List[DocumentChunkWithScore]
+
+
+class AuthMetadata(BaseModel):
+    auth: str
+    language: i18n

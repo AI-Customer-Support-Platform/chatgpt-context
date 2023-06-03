@@ -29,8 +29,10 @@ from models.api import (
 from datastore.factory import get_datastore, get_redis
 from services.file import get_document_from_file
 from services.chat import generate_chat_response, generate_chat_response_async, history_to_query
+from services.i18n import i18nAdapter
 
-from models.models import DocumentMetadata, Source, Query
+from models.models import DocumentMetadata, Source, Query, AuthMetadata
+from models.i18n import i18n
 
 bearer_scheme = HTTPBearer()
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
@@ -240,13 +242,23 @@ def creat_collection(
 @app.websocket("/ws/{collection}")
 async def websocket_endpoint(collection: str, websocket: WebSocket):
     await websocket.accept()
-
-    auth = await websocket.receive_text()
-    if auth != f"Bearer {BEARER_TOKEN}":
-        await websocket.close(1008, "errors.unauthorized")
+    
+    try:
+        metadata_json = await websocket.receive_json()
+        auth_metadata = AuthMetadata(**metadata_json)
+    except:
+        await websocket.close(1001, "authMetadata.decodeError")
         return
-    else:
-        await websocket.send_text(f"Hi,how can I help you?")
+        
+    if auth_metadata.auth != f"Bearer {BEARER_TOKEN}":
+        await websocket.close(1002, "errors.unauthorized")
+        return
+    try:
+        gretting = i18n_adapter.get_greetings(language=auth_metadata.language)
+        await websocket.send_text(gretting)
+    except ValueError:
+        gretting = i18n_adapter.get_greetings(language="en")
+        await websocket.send_text(gretting)
 
     user_id = await websocket.receive_text()
     user_uuid = uuid.UUID(user_id).bytes
@@ -299,6 +311,9 @@ async def startup():
 
     global cache
     cache = await get_redis()
+
+    global i18n_adapter
+    i18n_adapter = i18nAdapter("languages/local.json")
 
 
 def start():
