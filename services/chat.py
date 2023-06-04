@@ -21,7 +21,7 @@ def generate_chat_response(context: List[DocumentChunkWithScore], question: str,
             "role": "system",
             "content": f"""
             You are a very enthusiastic customer service who loves to help people! 
-            Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
+            According to following context sections, answer the question using only that information, outputted in markdown format. Don't start with "Answer: ".
             If you are unsure and the answer is not explicitly written in the context sections, say "Sorry, I don't know how to help with that."
 
             context sections:
@@ -43,14 +43,15 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
     result = ""
     for doc in context:
         result += f"<Result>{doc.text}</Result>\n"
-
+    print(result)
     messages = [
         {
             "role": "system",
             "content": f"""
             You are a very enthusiastic customer service who loves to help people! 
             Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
-            If you are unsure and the answer is not explicitly written in the context sections, say "{sorry}"
+            Please output a reply that matches the language of the question.
+            If you are unsure and the answer is not explicitly written in the context sections, say "Sorry, I don't know how to help with that."
 
             context sections:
             {result}
@@ -61,7 +62,7 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
     ]
 
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=messages, stream=True
+        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=1.1
     )
 
     content = ""
@@ -76,13 +77,18 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
 
 def history_to_query(question: str, history: List[ChatHistory]) -> str:
     prompt = []
-    practice_round = history[0]
+    if len(history) > 1:
+        practice_index = -2
+    else:
+        practice_index = 0
+
+    practice_round = history[practice_index]
     prompt.extend([
         {
             "role": "user",
             "content": """
             From now on, whenever your response depends on any factual information, please search the web by using the function <search>query</search> before responding. 
-            You only need to return the content of the search, no question answering is required
+            You only need to return the content of the search, no question answering is required.
             I will then paste web results in, and you can respond.
             """
         },
@@ -112,7 +118,8 @@ def history_to_query(question: str, history: List[ChatHistory]) -> str:
         }
     ])
 
-    for chat in history[1:]:
+    if len(history) > 1:
+        chat = history[-1]
         prompt.extend([
             {
                 "role": "user",
@@ -140,7 +147,7 @@ def history_to_query(question: str, history: List[ChatHistory]) -> str:
     ])
 
     # print(prompt)
-    completion = get_chat_completion(prompt)
+    completion = get_chat_completion(prompt, temperature=0)
 
     search_query = re.match(SEARCH, completion).group(1)
 

@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 from typing import Optional, Annotated
+import logging
 import uvicorn
 from fastapi import (
     FastAPI, 
@@ -148,32 +149,26 @@ async def query(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
-@app.get("/history/", response_model=ChatHistoryResponse)
-async def chat_history(response: Response, user_id:  str | None = Cookie(default=None)):
-    if user_id is None:
-        user_id = str(uuid.uuid4())
-        response.set_cookie(key="user_id", value=user_id)
-        return ChatHistoryResponse(
-            user_id=user_id,
-            history=[],
-            exist=False
-        )
-    else:
+@app.get("/history/{user_id}", response_model=ChatHistoryResponse)
+async def chat_history(response: Response, user_id: str):
+    try:
         user_bytes = uuid.UUID(user_id).bytes
+    except ValueError:
+        raise HTTPException(status_code=500, detail="badly formed hexadecimal UUID string")
 
-        if cache.user_exists(user_bytes):
-            history = cache.get_qa_history(user_bytes)
-            exist_flag = True
+    if cache.user_exists(user_bytes):
+        history = cache.get_qa_history(user_bytes)
+        exist_flag = True
 
-        else:
-            history = []
-            exist_flag = False
+    else:
+        history = []
+        exist_flag = False
 
-        return ChatHistoryResponse(
-            user_id=user_id, 
-            history=history, 
-            exist=exist_flag
-        )
+    return ChatHistoryResponse(
+        user_id=user_id, 
+        history=history, 
+        exist=exist_flag
+    )
 
 @app.post("/chat/{collection}", response_model=ChatResponse)
 async def chat(
@@ -268,11 +263,13 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         
     await websocket.send_text("END")
 
+
     user_id = await websocket.receive_text()
     user_uuid = uuid.UUID(user_id).bytes
     await websocket.send_text("OK")
 
     while True:
+        question_flag = True
         try:
             params = await websocket.receive_json()
         except WebSocketDisconnect:
@@ -284,33 +281,42 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         try:
             ask_request = ChatRequest(**params)
             question = ask_request.question
+            print(f"{user_id} asked: {question}")
         except:
             await websocket.close(1007, "errors.invalidAskRequest")
             return
 
         if cache.user_exists(user_uuid):
-            question = history_to_query(question, cache.get_chat_history(user_uuid))
-            print(question)
-
-        query_results = await datastore.query(
-            [Query(query=question, topK=3)],
-            collection
-        )
+            try:
+                question = history_to_query(question, cache.get_chat_history(user_uuid))
+                print(question)
+            except AttributeError:
+                question_flag = False
         
-        async for data in generate_chat_response_async(
-            context=query_results[0].results, 
-            question=question,
-            sorry=sorry):
+        if question_flag:
+            query_results = await datastore.query(
+                [Query(query=question, top_k=5)],
+                collection
+            )
 
-            await websocket.send_text(data)
+            async for data in generate_chat_response_async(
+                context=query_results[0].results, 
+                question=question):
 
-        cache.set_chat_history(user_uuid, {
-            "user_question": ask_request.question,
-            "query": f"<search>{question}</search>",
-            "background": f"<result>{query_results[0].results[0].text}</result>",
-            "answer": data
-        })
+                await websocket.send_text(data)
 
+            cache.set_chat_history(user_uuid, {
+                "user_question": ask_request.question,
+                "query": f"<search>{question}</search>",
+                "background": f"<result>{query_results[0].results[0].text}</result>",
+                "answer": data
+            })
+        else:
+            error_content = ""
+            for word in "Sorry, I don't know how to help with that.".split(" "):
+                error_content += f" {word}"
+                await websocket.send_text(error_content)
+                
         await websocket.send_text("END")
 
 @app.on_event("startup")
