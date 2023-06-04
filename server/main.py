@@ -251,11 +251,12 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
     greeting = ""
     try:
-        gretting_word = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="greetings")
-        sorry = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="sorry")
+        language=i18n(auth_metadata.language)
     except ValueError:
-        gretting = i18n_adapter.get_message(language="en", message="greetings")
-        sorry = i18n_adapter.get_message(language="en", message="sorry")
+        language = "en"
+
+    gretting_word = i18n_adapter.get_message(language, message="greetings")
+    sorry = i18n_adapter.get_message(language, message="sorry")
     
     for word in gretting_word:
         greeting += word
@@ -313,8 +314,8 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             })
         else:
             error_content = ""
-            for word in "Sorry, I don't know how to help with that.".split(" "):
-                error_content += f" {word}"
+            for word in i18n_adapter.get_message(language, message="sorry_list"):
+                error_content += word
                 await websocket.send_text(error_content)
                 
         await websocket.send_text("END")
