@@ -61,7 +61,7 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
     ]
 
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=messages, stream=True
+        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=1.1
     )
 
     content = ""
@@ -87,7 +87,7 @@ def history_to_query(question: str, history: List[ChatHistory]) -> str:
             "role": "user",
             "content": """
             From now on, whenever your response depends on any factual information, please search the web by using the function <search>query</search> before responding. 
-            You only need to return the content of the search, no question answering is required
+            You only need to return the content of the search, no question answering is required.
             I will then paste web results in, and you can respond.
             """
         },
@@ -146,7 +146,7 @@ def history_to_query(question: str, history: List[ChatHistory]) -> str:
     ])
 
     # print(prompt)
-    completion = get_chat_completion(prompt)
+    completion = get_chat_completion(prompt, temperature=0)
 
     search_query = re.match(SEARCH, completion).group(1)
 
