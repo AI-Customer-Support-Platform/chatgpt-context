@@ -247,6 +247,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         return
     else:
         await websocket.send_text(f"Hi,how can I help you?")
+        await websocket.send_text("END")
 
     user_id = await websocket.receive_text()
     user_uuid = uuid.UUID(user_id).bytes
@@ -264,6 +265,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         try:
             ask_request = ChatRequest(**params)
             question = ask_request.question
+            print(f"{user_id} asked: {question}")
         except:
             await websocket.close(1007, "errors.invalidAskRequest")
             return
