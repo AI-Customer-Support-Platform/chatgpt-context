@@ -64,3 +64,8 @@ class QueryWithEmbedding(Query):
 class QueryResult(BaseModel):
     query: str
     results: List[DocumentChunkWithScore]
+
+
+class AuthMetadata(BaseModel):
+    auth: str
+    language: str

@@ -39,7 +39,7 @@ def generate_chat_response(context: List[DocumentChunkWithScore], question: str,
 
     return completion
 
-async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str) -> str:
+async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
     result = ""
     for doc in context:
         result += f"<Result>{doc.text}</Result>\n"
@@ -50,7 +50,7 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
             "content": f"""
             You are a very enthusiastic customer service who loves to help people! 
             Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
-            If you are unsure and the answer is not explicitly written in the context sections, say "Sorry, I don't know how to help with that."
+            If you are unsure and the answer is not explicitly written in the context sections, say "{sorry}"
 
             context sections:
             {result}
