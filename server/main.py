@@ -246,7 +246,8 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         await websocket.close(1008, "errors.unauthorized")
         return
     else:
-        await websocket.send_text(f"Hi,how can I help you?")
+        for word in "Hi, how can I help you?".split(" "):
+            await websocket.send_text(word)
         await websocket.send_text("END")
 
     user_id = await websocket.receive_text()
