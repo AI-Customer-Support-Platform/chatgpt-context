@@ -1,10 +1,12 @@
 {
     "en": {
         "greetings": ["Hi, ", "how ", "can ", "I ", "help ", "you?"],
-        "sorry": "Sorry, I don't know how to help with that."
+        "sorry": "Sorry, I don't know how to help with that.",
+        "sorry_list": ["Sorry, ", "I ", "don't ", "know ", "how ", "to ", "help ", "with ", "that."]
     },
     "ja": {
         "greetings": ["こん","にちは、", "どう", "すればお", "手伝", "いできま", "すか?"],
-        "sorry": "申し訳ありませんが、この質問にどう答えてよいかわかりません"
+        "sorry": "申し訳ありませんが、この質問にどう答えてよいかわかりません",
+        "sorry_list": ["申し訳", "ありませんが、", "この質問", "にどう答え", "てよいか", "わかりません"]
     }
 }
