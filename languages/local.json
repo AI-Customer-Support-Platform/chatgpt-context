@@ -1,8 +1,10 @@
 {
     "en": {
-        "greetings": "Hi,how can I help you?"
+        "greetings": ["Hi, ", "how ", "can ", "I ", "help ", "you?"],
+        "sorry": "Sorry, I don't know how to help with that."
     },
     "ja": {
-        "greetings": "こんにちは、どうすればお手伝いできますか?"
+        "greetings": ["こん","にちは、", "どう", "すればお", "手伝", "いできま", "すか?"],
+        "sorry": "申し訳ありませんが、この質問にどう答えてよいかわかりません"
     }
 }
