@@ -39,7 +39,7 @@ def generate_chat_response(context: List[DocumentChunkWithScore], question: str,
 
     return completion
 
-async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str) -> str:
+async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
     result = ""
     for doc in context:
         result += f"<Result>{doc.text}</Result>\n"
