@@ -19,8 +19,8 @@ def i18n_client() -> i18nAdapter:
     return i18nAdapter("languages/local.json")
 
 def test_get_greetings(i18n_client):
-    assert i18n_client.get_message("en", "greetings") == "Hi,how can I help you?"
-    assert i18n_client.get_message("ja", "greetings") == "こんにちは、どうすればお手伝いできますか?"
+    assert i18n_client.get_message("en", "greetings") == ["Hi, ", "how ", "can ", "I ", "help ", "you?"]
+    assert i18n_client.get_message("ja", "greetings") == ["こん","にちは、", "どう", "すればお", "手伝", "いできま", "すか?"]
 
 def test_not_support_language(i18n_client):
     with pytest.raises(ValueError):

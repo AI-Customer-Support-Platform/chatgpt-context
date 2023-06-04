@@ -254,12 +254,19 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         await websocket.close(1002, "errors.unauthorized")
         return
 
+    greeting = ""
     try:
-        gretting = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="greetings")
-        await websocket.send_text(gretting)
+        gretting_word = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="greetings")
+        sorry = i18n_adapter.get_message(language=i18n(auth_metadata.language), message="sorry")
     except ValueError:
         gretting = i18n_adapter.get_message(language="en", message="greetings")
-        await websocket.send_text(gretting)
+        sorry = i18n_adapter.get_message(language="en", message="sorry")
+    
+    for word in gretting_word:
+        greeting += word
+        await websocket.send_text(greeting)
+        
+    await websocket.send_text("END")
 
     user_id = await websocket.receive_text()
     user_uuid = uuid.UUID(user_id).bytes
@@ -289,10 +296,11 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             [Query(query=question, topK=3)],
             collection
         )
-
+        
         async for data in generate_chat_response_async(
             context=query_results[0].results, 
-            question=question):
+            question=question,
+            sorry=sorry):
 
             await websocket.send_text(data)
 
