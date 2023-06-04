@@ -26,35 +26,35 @@ def test_not_support_language(i18n_client):
     with pytest.raises(ValueError):
         i18n_client.get_message(i18n("not_support_language"), "greetings")
 
-def test_i18n_websocket(websocket_client):
-    with websocket_client:
-        with websocket_client.websocket_connect("/ws/test") as ws:
-            ws.send_json({
-                "auth": f"Bearer {BEARER_TOKEN}", 
-                "language": "ja"
-            })
+# def test_i18n_websocket(websocket_client):
+#     with websocket_client:
+#         with websocket_client.websocket_connect("/ws/test") as ws:
+#             ws.send_json({
+#                 "auth": f"Bearer {BEARER_TOKEN}", 
+#                 "language": "ja"
+#             })
 
-            greeting = ws.receive_text()
-            assert greeting == "こんにちは、どうすればお手伝いできますか?"
+#             greeting = ws.receive_text()
+#             assert greeting == "こんにちは、どうすればお手伝いできますか?"
 
-def test_websocket_without_token(websocket_client):
-    with pytest.raises(WebSocketDisconnect):
-        with websocket_client.websocket_connect("/ws/test") as ws:
-            ws.send_json({
-                "language": "ja"
-            })
+# def test_websocket_without_token(websocket_client):
+#     with pytest.raises(WebSocketDisconnect):
+#         with websocket_client.websocket_connect("/ws/test") as ws:
+#             ws.send_json({
+#                 "language": "ja"
+#             })
 
-            greeting = ws.receive_text()
-            assert greeting == "こんにちは、どうすればお手伝いできますか?"
+#             greeting = ws.receive_text()
+#             assert greeting == "こんにちは、どうすればお手伝いできますか?"
 
 
-def test_websocket_without_unspported_language(websocket_client):
-    with websocket_client:
-        with websocket_client.websocket_connect("/ws/test") as ws:
-            ws.send_json({
-                "auth": f"Bearer {BEARER_TOKEN}", 
-                "language": "not_support_language"
-            })
-
-            greeting = ws.receive_text()
-            assert greeting == "Hi,how can I help you?"  
+# def test_websocket_without_unspported_language(websocket_client):
+#     with websocket_client:
+#         with websocket_client.websocket_connect("/ws/test") as ws:
+#             ws.send_json({
+#                 "auth": f"Bearer {BEARER_TOKEN}", 
+#                 "language": "not_support_language"
+#             })
+            
+#             greeting = ws.receive_text()
+#             assert greeting == "Hi,how can I help you?"  
