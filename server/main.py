@@ -153,7 +153,7 @@ async def chat_history(response: Response, user_id: str):
         user_bytes = uuid.UUID(user_id).bytes
     except ValueError:
         raise HTTPException(status_code=500, detail="badly formed hexadecimal UUID string")
-        
+
     if cache.user_exists(user_bytes):
         history = cache.get_qa_history(user_bytes)
         exist_flag = True
@@ -252,6 +252,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
     await websocket.send_text("OK")
 
     while True:
+        question_flag = True
         try:
             params = await websocket.receive_json()
         except WebSocketDisconnect:
@@ -269,27 +270,35 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             return
 
         if cache.user_exists(user_uuid):
-            question = history_to_query(question, cache.get_chat_history(user_uuid))
-            print(question)
+            try:
+                question = history_to_query(question, cache.get_chat_history(user_uuid))
+                print(question)
+            except AttributeError:
+                question_flag = False
+        
+        if question_flag:
+            query_results = await datastore.query(
+                [Query(query=question, topK=5)],
+                collection
+            )
 
-        query_results = await datastore.query(
-            [Query(query=question, topK=3)],
-            collection
-        )
+            async for data in generate_chat_response_async(
+                context=query_results[0].results, 
+                question=question):
 
-        async for data in generate_chat_response_async(
-            context=query_results[0].results, 
-            question=question):
+                await websocket.send_text(data)
 
-            await websocket.send_text(data)
-
-        cache.set_chat_history(user_uuid, {
-            "user_question": ask_request.question,
-            "query": f"<search>{question}</search>",
-            "background": f"<result>{query_results[0].results[0].text}</result>",
-            "answer": data
-        })
-
+            cache.set_chat_history(user_uuid, {
+                "user_question": ask_request.question,
+                "query": f"<search>{question}</search>",
+                "background": f"<result>{query_results[0].results[0].text}</result>",
+                "answer": data
+            })
+        else:
+            error_content = ""
+            for word in "Sorry, I don't know how to help with that.".split(" "):
+                error_content += f" {word}"
+                await websocket.send_text(error_content)
         await websocket.send_text("END")
 
 @app.on_event("startup")

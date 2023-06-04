@@ -21,7 +21,7 @@ def generate_chat_response(context: List[DocumentChunkWithScore], question: str,
             "role": "system",
             "content": f"""
             You are a very enthusiastic customer service who loves to help people! 
-            Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
+            According to following context sections, answer the question using only that information, outputted in markdown format. Don't start with "Answer: ".
             If you are unsure and the answer is not explicitly written in the context sections, say "Sorry, I don't know how to help with that."
 
             context sections:
@@ -43,7 +43,7 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
     result = ""
     for doc in context:
         result += f"<Result>{doc.text}</Result>\n"
-
+    print(result)
     messages = [
         {
             "role": "system",
@@ -76,7 +76,12 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
 
 def history_to_query(question: str, history: List[ChatHistory]) -> str:
     prompt = []
-    practice_round = history[0]
+    if len(history) > 1:
+        practice_index = -2
+    else:
+        practice_index = 0
+
+    practice_round = history[practice_index]
     prompt.extend([
         {
             "role": "user",
@@ -112,7 +117,8 @@ def history_to_query(question: str, history: List[ChatHistory]) -> str:
         }
     ])
 
-    for chat in history[1:]:
+    if len(history) > 1:
+        chat = history[-1]
         prompt.extend([
             {
                 "role": "user",
