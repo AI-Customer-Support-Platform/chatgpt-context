@@ -278,7 +278,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         
         if question_flag:
             query_results = await datastore.query(
-                [Query(query=question, topK=5)],
+                [Query(query=question, top_k=5)],
                 collection
             )
 
