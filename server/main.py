@@ -302,7 +302,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
             async for data in generate_chat_response_async(
                 context=query_results[0].results, 
-                question=question):
+                question=question, sorry=i18n_adapter.get_message(language, "sorry")):
 
                 await websocket.send_text(data)
 
