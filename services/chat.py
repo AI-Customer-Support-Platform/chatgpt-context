@@ -51,7 +51,7 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
             You are a very enthusiastic customer service who loves to help people! 
             Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
             Please output a reply that matches the language of the question.
-            If you are unsure and the answer is not explicitly written in the context sections, say {sorry}
+            If you are unsure and the answer is not explicitly written in the context sections, say "{sorry}"
 
             context sections:
             {result}
