@@ -280,12 +280,29 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             return
 
         try:
+            auth_metadata = AuthMetadata(**params)
+            language=i18n(auth_metadata.language)
+            gretting_word = i18n_adapter.get_message(language, message="greetings")
+            sorry = i18n_adapter.get_message(language, message="sorry")
+
+            greeting = ""
+            for word in gretting_word:
+                greeting += word
+                await websocket.send_text(greeting)
+            
+            await websocket.send_text("END")
+
+            continue
+        except:
+            pass
+
+        try:
             ask_request = ChatRequest(**params)
-            question = ask_request.question
-            print(f"{user_id} asked: {question}")
         except:
             await websocket.close(1007, "errors.invalidAskRequest")
             return
+        question = ask_request.question
+        print(f"{user_id} asked: {question}")
 
         if cache.user_exists(user_uuid):
             try:
