@@ -3,9 +3,12 @@ import os
 
 from models.chat_history import ChatHistory, QAHistory
 from typing import List
+from utils.common import singleton_with_lock
 
 REDIS_URL = os.environ.get("UPSTASH_REDIS_URL", "redis://localhost:6379")
 
+
+@singleton_with_lock
 class RedisChat():
     def __init__(self):
         self.redis = redis.from_url(REDIS_URL)

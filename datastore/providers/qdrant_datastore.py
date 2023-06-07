@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from grpc._channel import _InactiveRpcError
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PayloadSchemaType
+from utils.common import singleton_with_lock
 
 from datastore.datastore import DataStore
 from models.models import (
@@ -27,6 +28,7 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.environ.get("QDRANT_COLLECTION", "document_chunks")
 
 
+@singleton_with_lock
 class QdrantDataStore(DataStore):
     UUID_NAMESPACE = uuid.UUID("3896d314-1e95-4a3a-b45a-945f9f0b541d")
 
