@@ -42,29 +42,25 @@ def generate_chat_response(context: List[DocumentChunkWithScore], question: str,
 async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
     result = ""
     for doc in context:
-        result += f"<Result>{doc.text}</Result>\n"
-    print(result)
+        result += f"{doc.text}\n\"\"\"\n"
+    # print(result)
     messages = [
         {
             "role": "system",
             "content": f"""
-            You are a very enthusiastic customer service who loves to help people! 
-            Given the following context sections, answer the question using only that information, outputted in markdown format. Only return answer content. 
-            Please output a reply that matches the language of the question.
-            If you are unsure and the answer is not explicitly written in the context sections, say "{sorry}"
+            Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
+            Only return answer content.
 
-            context sections:
-            {result}
-            Question:
-            {question}
-            """,
+            {result}\nUser_Question: {question}
+            Answer:\n
+            """
         }
     ]
 
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=1.1
+        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
     )
-
+    # print(messages)
     content = ""
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
