@@ -1,38 +1,35 @@
 import os
 import json
 import uuid
-from typing import Optional, Annotated
 import logging
 import uvicorn
 from fastapi import (
     FastAPI, 
-    WebSocket, WebSocketDisconnect, 
-    File, Form, HTTPException, 
-    Depends, Body, UploadFile,
+    WebSocket, 
+    WebSocketDisconnect, 
+    HTTPException, 
+    Depends, 
+    Body,
     Cookie,
-    Response
+    Response,
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from server.api import knowledge_base
 
 from models.api import (
-    DeleteRequest,
-    DeleteResponse,
-    QueryRequest,
-    QueryResponse,
-    UpsertRequest,
-    UpsertResponse,
     ChatRequest,
     ChatResponse,
-    ChatHistoryResponse
+    ChatHistoryResponse,
+    WebsocketMessage
 )
 from datastore.factory import get_datastore, get_redis
-from services.file import get_document_from_file
+
 from services.chat import generate_chat_response, generate_chat_response_async, history_to_query
 from services.i18n import i18nAdapter
 
-from models.models import DocumentMetadata, Source, Query, AuthMetadata
+from models.models import Query, AuthMetadata
 from models.i18n import i18n
 
 bearer_scheme = HTTPBearer()
@@ -67,87 +64,7 @@ sub_app = FastAPI(
 )
 app.mount("/sub", sub_app)
 
-
-@app.post(
-    "/upsert-file/{collection}",
-    response_model=UpsertResponse,
-)
-async def upsert_file(
-    collection: str,
-    file: UploadFile = File(...),
-    metadata: Optional[str] = Form(None),
-):
-    try:
-        metadata_obj = (
-            DocumentMetadata.parse_raw(metadata)
-            if metadata
-            else DocumentMetadata(source=Source.file)
-        )
-    except:
-        metadata_obj = DocumentMetadata(source=Source.file)
-
-    document = await get_document_from_file(file, metadata_obj)
-
-    try:
-        ids = await datastore.upsert([document], collection_name=collection)
-        return UpsertResponse(ids=ids)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail=f"str({e})")
-    
-
-@app.post(
-    "/upsert/{collection}",
-    response_model=UpsertResponse,
-)
-async def upsert(
-    collection: str,
-    request: UpsertRequest = Body(...),
-):
-    try:
-        ids = await datastore.upsert(request.documents, collection_name=collection)
-        return UpsertResponse(ids=ids)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
-
-
-@app.post(
-    "/query/{collection}",
-    response_model=QueryResponse,
-)
-async def query_main(
-    collection: str,
-    request: QueryRequest = Body(...),
-):
-    try:
-        results = await datastore.query(
-            request.queries,
-            collection
-        )
-        return QueryResponse(results=results)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
-
-
-@sub_app.post(
-    "/query",
-    response_model=QueryResponse,
-    # NOTE: We are describing the shape of the API endpoint input due to a current limitation in parsing arrays of objects from OpenAPI schemas. This will not be necessary in the future.
-    description="Accepts search query objects array each with query and optional filter. Break down complex questions into sub-questions. Refine results by criteria, e.g. time / source, don't do this often. Split queries if ResponseTooLargeError occurs.",
-)
-async def query(
-    request: QueryRequest = Body(...),
-):
-    try:
-        results = await datastore.query(
-            request.queries,
-        )
-        return QueryResponse(results=results)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
+app.include_router(knowledge_base.router)
 
 @app.get("/history/{user_id}", response_model=ChatHistoryResponse)
 async def chat_history(response: Response, user_id: str):
@@ -192,47 +109,6 @@ async def chat(
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Internal Service Error") 
 
-@app.delete(
-    "/delete/{collection}",
-    response_model=DeleteResponse,
-)
-async def delete(
-    collection: str,
-    request: DeleteRequest = Body(...),
-):
-    if not (request.ids or request.filter or request.delete_all):
-        raise HTTPException(
-            status_code=400,
-            detail="One of ids, filter, or delete_all is required",
-        )
-    try:
-        success = await datastore.delete(
-            ids=request.ids,
-            filter=request.filter,
-            delete_all=request.delete_all,
-            collection_name=collection
-        )
-        return DeleteResponse(success=success)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
-
-@app.put(
-    "/collection/{collection}",
-    response_model=DeleteResponse,
-)
-def creat_collection(
-    collection: str,
-):
-    try:
-        flag = datastore.create_collection(collection)
-        if flag:
-            return DeleteResponse(success=True)
-        else:
-            return DeleteResponse(success=False)
-    except Exception as e:
-        print("Error:", e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @app.websocket("/ws/{collection}")
 async def websocket_endpoint(collection: str, websocket: WebSocket):
