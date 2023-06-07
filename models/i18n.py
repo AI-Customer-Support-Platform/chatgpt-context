@@ -16,3 +16,5 @@ class i18nAdapter():
     
     def get_message(self, language: i18n, message: LanguageMessage):
         return self.json[language][message]
+    
+    

@@ -22,15 +22,15 @@ from models.api import (
     ChatRequest,
     ChatResponse,
     ChatHistoryResponse,
-    WebsocketMessage
 )
 from datastore.factory import get_datastore, get_redis
 
 from services.chat import generate_chat_response, generate_chat_response_async, history_to_query
-from services.i18n import i18nAdapter
 
-from models.models import Query, AuthMetadata
-from models.i18n import i18n
+from models.models import Query
+from models.i18n import i18n, i18nAdapter
+from models.chat import AuthMetadata, WebsocketMessage
+from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 
 bearer_scheme = HTTPBearer()
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
@@ -125,93 +125,84 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         await websocket.close(1002, "errors.unauthorized")
         return
 
-    greeting = ""
-    try:
-        language=i18n(auth_metadata.language)
-    except ValueError:
-        language = "en"
-
-    gretting_word = i18n_adapter.get_message(language, message="greetings")
-    sorry = i18n_adapter.get_message(language, message="sorry")
-    
-    for word in gretting_word:
-        greeting += word
-        await websocket.send_text(greeting)
-        
-    await websocket.send_text("END")
-
-
-    user_id = await websocket.receive_text()
+    user_id = auth_metadata.uid
     user_uuid = uuid.UUID(user_id).bytes
     await websocket.send_text("OK")
 
     while True:
-        question_flag = True
+        language = "en"
+
         try:
             params = await websocket.receive_json()
+            message = WebsocketMessage(**params)
         except WebSocketDisconnect:
             return
         except json.decoder.JSONDecodeError:
-            await websocket.close()
+            await websocket.close(1003, "error.JSONDecode")
             return
 
-        try:
-            auth_metadata = AuthMetadata(**params)
-            language=i18n(auth_metadata.language)
-            gretting_word = i18n_adapter.get_message(language, message="greetings")
-            sorry = i18n_adapter.get_message(language, message="sorry")
+        match message.type:
+            case "switch_lang":
+                language = i18n(message.content.language)
+                sorry = i18n_adapter.get_message(language, message="sorry")
 
-            greeting = ""
-            for word in gretting_word:
-                greeting += word
-                await websocket.send_text(greeting)
-            
-            await websocket.send_text("END")
-
-            continue
-        except:
-            pass
-
-        try:
-            ask_request = ChatRequest(**params)
-        except:
-            await websocket.close(1007, "errors.invalidAskRequest")
-            return
-        question = ask_request.question
-        print(f"{user_id} asked: {question}")
-
-        if cache.user_exists(user_uuid):
-            try:
-                question = history_to_query(question, cache.get_chat_history(user_uuid))
-                print(question)
-            except AttributeError:
-                question_flag = False
-        
-        if question_flag:
-            query_results = await datastore.query(
-                [Query(query=question, top_k=3)],
-                collection
-            )
-
-            async for data in generate_chat_response_async(
-                context=query_results[0].results, 
-                question=question, sorry=i18n_adapter.get_message(language, "sorry")):
-
-                await websocket.send_text(data)
-
-            cache.set_chat_history(user_uuid, {
-                "user_question": ask_request.question,
-                "query": f"<search>{question}</search>",
-                "background": f"<result>{query_results[0].results[0].text}</result>",
-                "answer": data
-            })
-        else:
-            error_content = ""
-            for word in i18n_adapter.get_message(language, message="sorry_list"):
-                error_content += word
-                await websocket.send_text(error_content)
+                await stream_send(i18n_adapter.get_message(language, message="greetings"), websocket)
                 
-        await websocket.send_text("END")
+                continue
+
+            case "chat_v2":
+                recaptcha = v2_captcha_verify(message.content.v2_token)
+            
+            case "chat_v3":
+                recaptcha = v3_captcha_verify(message.content.v3_token)
+
+
+        if recaptcha:
+            question_flag = True
+            question = message.content.question
+            print(f"{user_id} asked: {question}")
+
+            if cache.user_exists(user_uuid):
+                try:
+                    question = history_to_query(question, cache.get_chat_history(user_uuid))
+                    print(question)
+                except AttributeError:
+                    question_flag = False
+            
+            if question_flag:
+                query_results = await datastore.query(
+                    [Query(query=question, top_k=3)],
+                    collection
+                )
+
+                async for data in generate_chat_response_async(
+                    context=query_results[0].results, 
+                    question=question, sorry=i18n_adapter.get_message(language, "sorry")):
+                    await websocket.send_text(data)
+
+                cache.set_chat_history(user_uuid, {
+                    "user_question": question,
+                    "query": f"<search>{question}</search>",
+                    "background": f"<result>{query_results[0].results[0].text}</result>",
+                    "answer": data
+                })
+
+                await websocket.send_text("END")
+            else:
+                await stream_send(i18n_adapter.get_message(language, message="sorry_list"), websocket)
+
+        else:
+            await websocket.send_text("V2_REQ")
+            continue
+
+async def stream_send(word_list, websocket):
+    content = ""
+    for word in word_list:
+        content += word
+        await websocket.send_text(content)
+    
+    await websocket.send_text("END")
+
 
 @app.on_event("startup")
 async def startup():

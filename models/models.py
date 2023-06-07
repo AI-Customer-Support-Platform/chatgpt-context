@@ -9,11 +9,6 @@ class Source(str, Enum):
     chat = "chat"
 
 
-class WebsocketFlag(str, Enum):
-    chat_v3 = "chat_v3"
-    chat_v2 = "chat_v2"
-    switch_lang = "switch_lang"
-
 class DocumentMetadata(BaseModel):
     source: Optional[Source] = None
     source_id: Optional[str] = None
@@ -71,6 +66,3 @@ class QueryResult(BaseModel):
     results: List[DocumentChunkWithScore]
 
 
-class AuthMetadata(BaseModel):
-    auth: str
-    language: str
