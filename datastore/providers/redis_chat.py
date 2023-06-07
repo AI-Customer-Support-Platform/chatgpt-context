@@ -1,7 +1,7 @@
 import redis
 import os
 
-from models.chat_history import ChatHistory, QAHistory
+from models.chat import ChatHistory, QAHistory
 from typing import List
 from utils.common import singleton_with_lock
 

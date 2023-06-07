@@ -1,8 +1,7 @@
 from services.openai import get_chat_completion, get_completion
 from models.models import DocumentChunkWithScore
 from models.openai_schemas import OpenAIChatResponse
-from models.chat_history import ChatHistory
-from models.chat_history import ChatHistory
+from models.chat import ChatHistory
 from typing import List
 
 import openai

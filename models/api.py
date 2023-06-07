@@ -4,7 +4,7 @@ from models.models import (
     Query,
     QueryResult
 )
-from models.chat_history import QAHistory
+from models.chat import QAHistory
 from pydantic import BaseModel
 from typing import List, Optional
 

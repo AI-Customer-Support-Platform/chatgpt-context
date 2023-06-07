@@ -1,5 +1,5 @@
 from datastore.providers.redis_chat import RedisChat
-from models.chat_history import ChatHistory
+from models.chat import ChatHistory
 import pytest
 
 
