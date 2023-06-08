@@ -10,35 +10,7 @@ import re
 
 SEARCH = re.compile(r"<search>(.*)<\/search>")
 
-def generate_chat_response(context: List[DocumentChunkWithScore], question: str, model: str) -> str:
-    result = ""
-    for doc in context:
-        result += f"<Result>{doc.text}</Result>\n"
-
-    messages = [
-        {
-            "role": "system",
-            "content": f"""
-            You are a very enthusiastic customer service who loves to help people! 
-            According to following context sections, answer the question using only that information, outputted in markdown format. Don't start with "Answer: ".
-            If you are unsure and the answer is not explicitly written in the context sections, say "Sorry, I don't know how to help with that."
-
-            context sections:
-            {result}
-            Question:
-            {question}
-            """,
-        }
-    ]
-
-    if model == "gpt-3.5-turbo":
-        completion = get_chat_completion(messages, model)
-    else:
-        completion = get_completion(messages[0]["content"], model)
-
-    return completion
-
-async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
+def generate_chat(context: List[DocumentChunkWithScore], question: str, sorry: str) -> List[str]:
     result = ""
     for doc in context:
         result += f"{doc.text}\n\"\"\"\n"
@@ -56,6 +28,11 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
         }
     ]
 
+    return messages
+
+
+async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
+    messages = generate_chat(context, question, sorry)
     stream_answer = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
     )

@@ -25,7 +25,7 @@ from models.api import (
 )
 from datastore.factory import get_datastore, get_redis
 
-from services.chat import generate_chat_response, generate_chat_response_async, history_to_query
+from services.chat import generate_chat_response_async, history_to_query
 
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
@@ -98,7 +98,7 @@ async def chat(
             collection
         )
         
-        chat_response = generate_chat_response(
+        chat_response = await generate_chat_response_async(
             context=query_results[0].results,
             question=request.question,
             model=request.model,
