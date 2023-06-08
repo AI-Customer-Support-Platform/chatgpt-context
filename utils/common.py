@@ -13,6 +13,7 @@ def singleton_with_lock(cls: Type[T]):
     def get_instance(*args, **kwargs) -> T:
         with lock:
             if cls not in instances:
+                print(f"{cls.__name__} Init")
                 instances[cls] = cls(*args, **kwargs)
             return instances[cls]
 

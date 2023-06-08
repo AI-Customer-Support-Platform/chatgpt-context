@@ -151,10 +151,10 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 continue
 
             case "chat_v2":
-                recaptcha = v2_captcha_verify(message.content.v2_token)
+                recaptcha = v2_captcha_verify(user_uuid, message.content.v2_token)
             
             case "chat_v3":
-                recaptcha = v3_captcha_verify(message.content.v3_token)
+                recaptcha = v3_captcha_verify(user_uuid, message.content.v3_token)
 
 
         if recaptcha:
