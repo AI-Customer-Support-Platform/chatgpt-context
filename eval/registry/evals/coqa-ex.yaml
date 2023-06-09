@@ -1,0 +1,46 @@
+faq-fact:
+  id: faq-fact.dev.v0
+  metrics: [accuracy]
+
+faq-fact.dev.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: faq/faq-ja.jsonl
+    eval_type: cot_classify
+    modelgraded_spec: fact
+
+faq-closedqa-correct:
+  id: faq-closedqa-correct.dev.v0
+  metrics: [accuracy]
+
+faq-closedqa-correct.dev.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: faq/faq-ja.jsonl
+    modelgraded_spec: closedqa
+    modelgraded_spec_args:
+      criteria: "correctness: Is the answer correct?"
+
+faq-closedqa-relevance:
+  id: faq-closedqa-relevance.dev.v0
+  metrics: [accuracy]
+
+faq-closedqa-relevance.dev.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: faq/faq-ja.jsonl
+    modelgraded_spec: closedqa
+    modelgraded_spec_args:
+      criteria: "relevance: Is the submission referring to a real quote from the text?"
+
+faq-closedqa-conciseness:
+  id: faq-closedqa-conciseness.dev.v0
+  metrics: [accuracy]
+
+faq-closedqa-conciseness.dev.v0:
+  class: evals.elsuite.modelgraded.classify:ModelBasedClassify
+  args:
+    samples_jsonl: faq/faq-ja.jsonl
+    modelgraded_spec: closedqa
+    modelgraded_spec_args:
+      criteria: "conciseness: Is the answer concise and to the point?"
