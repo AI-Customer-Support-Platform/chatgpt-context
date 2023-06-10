@@ -162,12 +162,11 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             question = message.content.question
             print(f"{user_id} asked: {question}")
 
-            if cache.user_exists(user_uuid):
-                try:
-                    question = history_to_query(question, cache.get_chat_history(user_uuid))
-                    print(question)
-                except AttributeError:
-                    question_flag = False
+            try:
+                question = history_to_query(question, cache.get_chat_history(user_uuid))
+                print(question)
+            except AttributeError:
+                question_flag = False
             
             if question_flag:
                 query_results = await datastore.query(

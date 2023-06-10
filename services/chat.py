@@ -49,12 +49,19 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], qu
 
 def history_to_query(question: str, history: List[ChatHistory]) -> str:
     prompt = []
-    if len(history) > 1:
-        practice_index = -2
+    if len(history) == 0:
+        practice_round = {
+            "user_question": "Who are the founders of OpenAI?",
+            "query": "<search>OpenAI founders</search>",
+            "background": "<result>The organization was founded in San Francisco in 2015 by Sam Altman, Reid Hoffman, Jessica Livingston, Elon Musk, Ilya Sutskever, Peter Thiel and others, who collectively pledged US$ 1 billion. Musk resigned from the board in 2018 but remained a donor.</result>",
+            "answer": "The founders of OpenAI are Sam Altman, Reid Hoffman, Jessica Livingston, Elon Musk, Ilya Sutskever, Peter Thiel and others."
+        }
+    elif len(history) == 1:
+        practice_round = history[0]
     else:
-        practice_index = 0
+        practice_round = history[-2]
 
-    practice_round = history[practice_index]
+    
     prompt.extend([
         {
             "role": "user",

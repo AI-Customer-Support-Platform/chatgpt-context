@@ -29,7 +29,11 @@ class RedisChat():
         return qa_list
     
     def get_chat_history(self, user_id: bytes) -> List[ChatHistory]:
-        chat_history = self.redis.json().get(user_id, "$")[0]
+        try:
+            chat_history = self.redis.json().get(user_id, "$")[0]
+        except TypeError:
+            chat_history = []
+            
         return chat_history
 
     def user_exists(self, user_id: bytes) -> bool:
