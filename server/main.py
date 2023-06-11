@@ -159,29 +159,30 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
         if recaptcha:
             question_flag = True
-            question = message.content.question
-            print(f"{user_id} asked: {question}")
+            user_question = message.content.question
+            print(f"{user_id} asked: {user_question}")
 
             try:
-                question = history_to_query(question, cache.get_chat_history(user_uuid))
-                print(question)
+                query_question = history_to_query(user_question, cache.get_chat_history(user_uuid))
+                print(query_question)
             except AttributeError:
                 question_flag = False
             
             if question_flag:
                 query_results = await datastore.query(
-                    [Query(query=question, top_k=3)],
+                    [Query(query=query_question, top_k=3)],
                     collection
                 )
 
                 async for data in generate_chat_response_async(
                     context=query_results[0].results, 
-                    question=question, sorry=i18n_adapter.get_message(language, "sorry")):
+                    user_question=user_question,
+                    sorry=sorry):
                     await websocket.send_text(data)
 
                 cache.set_chat_history(user_uuid, {
-                    "user_question": question,
-                    "query": f"<search>{question}</search>",
+                    "user_question": user_question,
+                    "query": f"<search>{query_question}</search>",
                     "background": f"<result>{query_results[0].results[0].text}</result>",
                     "answer": data
                 })

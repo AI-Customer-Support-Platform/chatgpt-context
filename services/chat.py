@@ -2,6 +2,7 @@ from services.openai import get_chat_completion, get_completion
 from models.models import DocumentChunkWithScore
 from models.openai_schemas import OpenAIChatResponse
 from models.chat import ChatHistory
+from models.nlp_schemas import Classify
 from typing import List
 
 import openai
@@ -10,11 +11,42 @@ import re
 
 SEARCH = re.compile(r"<search>(.*)<\/search>")
 
-def generate_chat(context: List[DocumentChunkWithScore], question: str, sorry: str) -> List[str]:
-    result = ""
-    for doc in context:
-        result += f"{doc.text}\n\"\"\"\n"
-    # print(result)
+def classify_question(question: str) -> Classify:
+    messgaes = [
+        {
+            "role": "system",
+            "content": """
+            You will be provided with customer service queries. 
+            Classify each query into a category.
+            Provide your output in json format with the keys.
+
+            sentiment:
+                - negative
+                - neutral
+                - positive
+            """
+        },
+        {
+            "role": "user",
+            "content": "I am very worried about the data problem, can you help me?"
+        },
+        {
+            "role": "assistant",
+            "content": """{"sentiment": "negative"}"""
+        },
+        {
+            "role": "user",
+            "content": question
+        }
+    ]
+
+    completion = get_chat_completion(messgaes, temperature=0)
+
+    return Classify(**json.loads(completion))
+
+
+def generate_chat(context: str, question: str, sorry: str) -> List[str]:
+    # print(f"Context: {context}")
     messages = [
         {
             "role": "system",
@@ -22,7 +54,7 @@ def generate_chat(context: List[DocumentChunkWithScore], question: str, sorry: s
             Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
             Only return answer content.
 
-            {result}\nUser_Question: {question}
+            {context}\nUser_Question: {question}
             Answer:\n
             """
         }
@@ -31,8 +63,38 @@ def generate_chat(context: List[DocumentChunkWithScore], question: str, sorry: s
     return messages
 
 
-async def generate_chat_response_async(context: List[DocumentChunkWithScore], question: str, sorry: str) -> str:
-    messages = generate_chat(context, question, sorry)
+def negative_chat(context: str, user_question: str, sorry: str) -> List[str]:
+    # print(f"Context: {context}")
+    messages = [
+        {
+            "role": "system",
+            "content": f"""
+            Please follow the steps below for question answering:
+
+            Step 1: Please appease user_questions with negative emotions, the output is the first paragraph of the answer
+            Step 2: Use the provided articles delimited by triple quotes to answer "user_question". If the answer cannot be found in the articles, write "{sorry}". the output is the second paragraph of the answer
+
+            {context}
+
+            user_question: {user_question}
+            """
+        }
+    ]
+
+    return messages
+
+async def generate_chat_response_async(context: List[DocumentChunkWithScore], user_question: str, sorry: str) -> str:
+    context_str = ""
+    for doc in context:
+        context_str += f"{doc.text}\n\"\"\"\n"
+    # print(f"Sorry: {sorry}")
+    sentiment = classify_question(user_question).sentiment
+
+    if sentiment == "negative":
+        messages = negative_chat(context_str, user_question, sorry)
+    else:
+        messages = generate_chat(context_str, user_question, sorry)
+
     stream_answer = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
     )
