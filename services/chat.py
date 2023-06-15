@@ -42,7 +42,12 @@ def classify_question(question: str) -> Classify:
 
     completion = get_chat_completion(messgaes, temperature=0)
 
-    return Classify(**json.loads(completion))
+    try:
+        result = Classify(**json.loads(completion))
+    except:
+        result = Classify(sentiment="neutral")
+    
+    return result
 
 
 def generate_chat(context: str, question: str, sorry: str) -> List[str]:
