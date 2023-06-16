@@ -42,6 +42,10 @@ async def answer_question(lang: str, language: str, collection: str):
     query_list = cache.get_key_word(f"{lang}QuestionKeyWord")
     question_list = generate_question(query_list, language)
 
+    print(cache.redis)
+
+    cache.redis.delete(f"{lang}DailyQuestion")
+
     for question in question_list:
         print(question)
         query_question = question["keyword"]
@@ -66,4 +70,4 @@ async def answer_question(lang: str, language: str, collection: str):
 async def generate_faq():
     for lang in i18n_adapter.get_support_language():
         language = i18n_adapter.get_message(lang, "language")
-        answer_question = await answer_question(lang, language, "microsoft")
+        await answer_question(lang, language, "microsoft")  

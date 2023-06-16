@@ -148,10 +148,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 sorry = i18n_adapter.get_message(language, message="sorry")
 
                 await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
-                print(WebsocketMessage(
-                    type=WebsocketFlag.answer_body, 
-                    content=i18n_adapter.get_message(language, message="greetings")
-                ).dict())
+
                 await websocket.send_json(WebsocketMessage(
                     type=WebsocketFlag.answer_body, 
                     content=i18n_adapter.get_message(language, message="greetings")
