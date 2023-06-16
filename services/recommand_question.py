@@ -10,6 +10,7 @@ import asyncio
 datastore = qdrant_datastore.QdrantDataStore()
 cache = redis_chat.RedisChat()
 i18n_adapter = i18nAdapter("languages/local.json")
+sem = asyncio.Semaphore(2)
 
 def generate_question(query_list: List[str], language: str) -> List[str]:
     query_content = ""
@@ -42,8 +43,6 @@ async def answer_question(lang: str, language: str, collection: str):
     query_list = cache.get_key_word(f"{lang}QuestionKeyWord")
     question_list = generate_question(query_list, language)
 
-    print(cache.redis)
-
     cache.redis.delete(f"{lang}DailyQuestion")
 
     for question in question_list:
@@ -68,6 +67,7 @@ async def answer_question(lang: str, language: str, collection: str):
         print(f"{user_question} OK") 
 
 async def generate_faq():
-    for lang in i18n_adapter.get_support_language():
-        language = i18n_adapter.get_message(lang, "language")
-        await answer_question(lang, language, "microsoft")  
+    async with sem:
+        for lang in i18n_adapter.get_support_language():
+            language = i18n_adapter.get_message(lang, "language")
+            await answer_question(lang, language, "microsoft")  
