@@ -24,12 +24,13 @@ from models.api import (
     ChatHistoryResponse,
 )
 from datastore.factory import get_datastore, get_redis
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from services.recommand_question import generate_faq
 from services.chat import generate_chat_response_async, history_to_query
 
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
-from models.chat import AuthMetadata, WebsocketMessage
+from models.chat import AuthMetadata, WebsocketMessage, WebsocketFlag
 from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 
 bearer_scheme = HTTPBearer()
@@ -127,11 +128,11 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
     user_id = auth_metadata.uid
     user_uuid = uuid.UUID(user_id).bytes
-    await websocket.send_text("OK")
+    await websocket.send_json(WebsocketMessage(type="authorized").dict())
+
+    language = i18n("en")
 
     while True:
-        language = "en"
-
         try:
             params = await websocket.receive_json()
             message = WebsocketMessage(**params)
@@ -146,8 +147,19 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 language = i18n(message.content.language)
                 sorry = i18n_adapter.get_message(language, message="sorry")
 
-                await stream_send(i18n_adapter.get_message(language, message="greetings"), websocket)
-                
+                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
+                await websocket.send_json(WebsocketMessage(
+                    type=WebsocketFlag.answer_body, 
+                    content=i18n_adapter.get_message(language, message="greetings")
+                ).dict())
+
+                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
+
+                await websocket.send_json(WebsocketMessage(
+                    type=WebsocketFlag.questions, 
+                    content=cache.get_faq_question(language)
+                ).dict())
+
                 continue
 
             case "chat_v2":
@@ -160,11 +172,26 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         if recaptcha:
             question_flag = True
             user_question = message.content.question
+            cache_flag = message.content.cache
             print(f"{user_id} asked: {user_question}")
+
+            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
+
+            if cache_flag:
+                cache_answer = cache.get_faq_answer(user_question, language)
+                if cache_answer:
+                    await websocket.send_json(WebsocketMessage(
+                        type=WebsocketFlag.answer_body, 
+                        content=cache_answer
+                    ).dict())
+
+                    await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
+
+                    continue
 
             try:
                 query_question = history_to_query(user_question, cache.get_chat_history(user_uuid))
-                print(query_question)
+                cache.add_question_key_word(query_question, language)
             except AttributeError:
                 question_flag = False
             
@@ -174,35 +201,41 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                     collection
                 )
 
+                content = ""
+
                 async for data in generate_chat_response_async(
                     context=query_results[0].results, 
                     user_question=user_question,
                     sorry=sorry):
-                    await websocket.send_text(data)
 
+                    content += data
+
+                    await websocket.send_json(WebsocketMessage(
+                        type=WebsocketFlag.answer_body, 
+                        content=data
+                    ).dict())
+                
                 cache.set_chat_history(user_uuid, {
                     "user_question": user_question,
                     "query": f"<search>{query_question}</search>",
                     "background": f"<result>{query_results[0].results[0].text}</result>",
-                    "answer": data
+                    "answer": content
                 })
 
-                await websocket.send_text("END")
+                if content.startswith(i18n_adapter.get_message(language, message="sorry")):
+                    cache.add_not_answer_key_world(query_question, language)
+
+                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
+
             else:
-                await stream_send(i18n_adapter.get_message(language, message="sorry_list"), websocket)
+                await websocket.send_json(WebsocketMessage(
+                    type=WebsocketFlag.answer_body,
+                    content=i18n_adapter.get_message(language, message="sorry")
+                ).dict())
 
         else:
-            await websocket.send_text("V2_REQ")
+            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.v2_req))
             continue
-
-async def stream_send(word_list, websocket):
-    content = ""
-    for word in word_list:
-        content += word
-        await websocket.send_text(content)
-    
-    await websocket.send_text("END")
-
 
 @app.on_event("startup")
 async def startup():
@@ -215,6 +248,18 @@ async def startup():
     global i18n_adapter
     i18n_adapter = i18nAdapter("languages/local.json")
 
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        func=generate_faq,
+        trigger="cron",
+        hour=0,
+        minute=0,
+        timezone="UTC",
+        id="generate_faq",
+        name="generate_faq",
+        replace_existing=True,
+    )
+    scheduler.start()
 
 def start():
     uvicorn.run("server.main:app", host="0.0.0.0", port=8000, reload=True)

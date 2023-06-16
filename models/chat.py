@@ -26,6 +26,12 @@ class WebsocketFlag(str, Enum):
     chat_v3 = "chat_v3"
     chat_v2 = "chat_v2"
     switch_lang = "switch_lang"
+    authorized = "authorized"
+    questions = "questions"
+    v2_req = "v2_req"
+    answer_start = "answer::start"
+    answer_body = "answer::body"
+    answer_end = "answer::end"
 
 
 class SwitchLanguage(BaseModel):
@@ -35,13 +41,16 @@ class SwitchLanguage(BaseModel):
 class ChatV2Message(BaseModel):
     question: str
     v2_token: str
+    cache: Optional[bool] = False
 
 
 class ChatV3Message(BaseModel):
     question: str
     v3_token: str
+    cache: Optional[bool] = False
 
 
 class WebsocketMessage(BaseModel):
     type: WebsocketFlag
-    content: Union[SwitchLanguage, ChatV2Message, ChatV3Message]
+    content: Optional[Union[SwitchLanguage, ChatV2Message, ChatV3Message, List[str], str]] = ""
+

@@ -104,11 +104,11 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], us
         model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
     )
     # print(messages)
-    content = ""
+
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
         if resp.choices[0].delta is not None:
-            content += resp.choices[0].delta.get("content", "")
+            content = resp.choices[0].delta.get("content", "")
         elif chunk.choices[0].finish_reason == "stop":
             continue
 
