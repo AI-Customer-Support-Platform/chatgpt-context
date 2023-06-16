@@ -5,6 +5,8 @@ from models.chat import ChatHistory, QAHistory
 from typing import List
 from utils.common import singleton_with_lock
 
+import codecs
+
 REDIS_URL = os.environ.get("UPSTASH_REDIS_URL", "redis://localhost:6379")
 
 
@@ -38,3 +40,34 @@ class RedisChat():
 
     def user_exists(self, user_id: bytes) -> bool:
         return self.redis.exists(user_id)
+    
+    def add_question_key_word(self, query: str, language: str):
+        self.redis.zincrby(f"{language}QuestionKeyWord", 1, query)
+    
+    def get_key_word(self, collection: str) -> List[str]:
+        result = self.redis.zrange(collection, 0, 4, desc=True)
+        return list(map(codecs.decode, result))
+    
+    def add_not_answer_key_world(self, query: str, language: str):
+        self.redis.zrem(f"{language}QuestionKeyWord", query)
+        self.redis.zincrby("NotAnswerKeyWord", 1, query)
+    
+    def add_faq(self, question: str, answer: str, language: str):
+        self.redis.hset(f"{language}DailyQuestion", question, answer)
+    
+    def get_faq_question(self, language: str) -> List[str]:
+        question_list = self.redis.hkeys(f"{language}DailyQuestion")
+        try:
+            question_str_list = list(map(codecs.decode, question_list))
+        except TypeError:
+            question_str_list = []
+        
+        return question_str_list
+
+    def get_faq_answer(self, question: str, language: str) -> str:
+        try:
+            answer = self.redis.hget(f"{language}DailyQuestion", question)
+            answer_str = codecs.decode(answer)
+        except TypeError:
+            answer_str = ""
+        return answer_str

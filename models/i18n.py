@@ -1,5 +1,6 @@
 import json
 from enum import Enum
+from typing import List
 from utils.common import singleton_with_lock
 class i18n(str, Enum):
     en = "en"
@@ -17,4 +18,5 @@ class i18nAdapter():
     def get_message(self, language: i18n, message: LanguageMessage):
         return self.json[language][message]
     
-    
+    def get_support_language(self) -> List[i18n]:
+        return list(self.json.keys())
