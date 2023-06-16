@@ -148,6 +148,10 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 sorry = i18n_adapter.get_message(language, message="sorry")
 
                 await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
+                print(WebsocketMessage(
+                    type=WebsocketFlag.answer_body, 
+                    content=i18n_adapter.get_message(language, message="greetings")
+                ).dict())
                 await websocket.send_json(WebsocketMessage(
                     type=WebsocketFlag.answer_body, 
                     content=i18n_adapter.get_message(language, message="greetings")
@@ -225,16 +229,16 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 if content.startswith(i18n_adapter.get_message(language, message="sorry")):
                     cache.add_not_answer_key_world(query_question, language)
 
-                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
-
             else:
                 await websocket.send_json(WebsocketMessage(
                     type=WebsocketFlag.answer_body,
                     content=i18n_adapter.get_message(language, message="sorry")
                 ).dict())
 
+            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
+
         else:
-            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.v2_req))
+            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.v2_req).dict())
             continue
 
 @app.on_event("startup")
