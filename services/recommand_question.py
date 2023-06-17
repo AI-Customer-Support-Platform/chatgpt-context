@@ -40,30 +40,31 @@ def generate_question(query_list: List[str], language: str) -> List[str]:
 
 
 async def answer_question(lang: str, language: str, collection: str):
-    query_list = cache.get_key_word(f"{lang}QuestionKeyWord")
+    query_list = cache.get_key_word(lang)
     question_list = generate_question(query_list, language)
 
     cache.redis.delete(f"{lang}DailyQuestion")
 
     for question in question_list:
         print(question)
-        query_question = question["keyword"]
         user_question = question["question"]
 
 
         query_results = await datastore.query(
-            [Query(query=query_question, top_k=3)],
+            [Query(query=user_question, top_k=3)],
             collection
         )
+
+        content = ""
 
         async for data in generate_chat_response_async(
             context=query_results[0].results, 
             user_question=user_question,
             sorry=i18n_adapter.get_message(lang, message="sorry")):
-            
-            continue
+
+            content += data
         
-        cache.add_faq(user_question, data, lang)
+        cache.add_faq(user_question, content, lang)
         print(f"{user_question} OK") 
 
 async def generate_faq():
