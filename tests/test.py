@@ -63,7 +63,7 @@ async def generate_chat(user_question: str):
                     query=function_args.get("key_word")
                 )
             case "get_balance":
-                function_response = {"balance": "1000 USD"}
+                function_response = "1000 USD"
 
         messages.append(response_message)
         messages.append(
@@ -98,4 +98,4 @@ async def query_background_knowledge(query: str) -> str:
     return context_str
     
 if __name__ == '__main__':
-    asyncio.run(generate_chat("How to get the biggest discount on windows 365?"))
+    asyncio.run(generate_chat("Check my balance"))
