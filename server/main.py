@@ -26,7 +26,7 @@ from models.api import (
 from datastore.factory import get_datastore, get_redis
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.recommand_question import generate_faq
-from services.chat import generate_chat_response_async, history_to_query
+from services.chat import chat_switch
 
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
@@ -99,7 +99,7 @@ async def chat(
             collection
         )
         
-        chat_response = await generate_chat_response_async(
+        chat_response = await chat_switch(
             context=query_results[0].results,
             question=request.question,
             model=request.model,
@@ -171,7 +171,6 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
 
         if recaptcha:
-            question_flag = True
             user_question = message.content.question
             cache_flag = message.content.cache
             print(f"{user_id} asked: {user_question}")
@@ -189,48 +188,30 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                     await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
 
                     continue
-
-            try:
-                query_question = history_to_query(user_question, cache.get_chat_history(user_uuid))
-                cache.add_question_key_word(query_question, language)
-            except AttributeError:
-                question_flag = False
             
-            if question_flag:
-                query_results = await datastore.query(
-                    [Query(query=query_question, top_k=3)],
-                    collection
-                )
+            chat_response = await chat_switch(
+                question=user_question,  
+                history=cache.get_chat_history(user_uuid), 
+                collection=collection, 
+                language=language,
+                sorry=sorry
+            )
+            content = ""
+            async for data in chat_response:
+                content += data
 
-                content = ""
-
-                async for data in generate_chat_response_async(
-                    context=query_results[0].results, 
-                    user_question=user_question,
-                    sorry=sorry):
-
-                    content += data
-
-                    await websocket.send_json(WebsocketMessage(
-                        type=WebsocketFlag.answer_body, 
-                        content=data
-                    ).dict())
-                
-                cache.set_chat_history(user_uuid, {
-                    "user_question": user_question,
-                    "query": f"<search>{query_question}</search>",
-                    "background": f"<result>{query_results[0].results[0].text}</result>",
-                    "answer": content
-                })
-
-                if content.startswith(i18n_adapter.get_message(language, message="sorry")):
-                    cache.add_not_answer_key_world(query_question, language)
-
-            else:
                 await websocket.send_json(WebsocketMessage(
-                    type=WebsocketFlag.answer_body,
-                    content=i18n_adapter.get_message(language, message="sorry")
+                    type=WebsocketFlag.answer_body, 
+                    content=data
                 ).dict())
+            
+            cache.set_chat_history(user_uuid, {
+                "user_question": user_question,
+                "answer": content
+            })
+
+            if content.startswith(i18n_adapter.get_message(language, message="sorry")):
+                cache.add_not_answer_key_world(query_question, language)
 
             await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
 

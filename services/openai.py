@@ -41,7 +41,7 @@ def get_chat_completion(
     messages,
     model="gpt-3.5-turbo",  # use "gpt-4" for better results
     deployment_id = None,
-    temperature = 1
+    temperature = 0
 ):
     """
     Generate a chat completion using OpenAI's chat completion API.
