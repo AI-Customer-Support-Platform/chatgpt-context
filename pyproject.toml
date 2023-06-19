@@ -30,6 +30,7 @@ qdrant-client = {version = "^1.0.4", python = "<3.12"}
 websockets = "^11.0.3"
 redis = {extras = ["hiredis"], version = "^4.5.5"}
 apscheduler = "^3.10.1"
+azure-ai-textanalytics = "^5.3.0"
 
 [tool.poetry.scripts]
 start = "server.main:start"
@@ -42,7 +43,6 @@ pytest-cov = "^4.0.0"
 pytest-asyncio = "^0.20.3"
 pytest-mock = "^3.10.0"
 evals = "^1.0.3.post1"
-azure-ai-textanalytics = "^5.2.1"
 
 [build-system]
 requires = ["poetry-core"]
