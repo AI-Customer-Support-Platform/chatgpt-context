@@ -185,6 +185,11 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                         content=cache_answer
                     ).dict())
 
+                    cache.set_chat_history(user_uuid, {
+                        "user_question": user_question,
+                        "answer": cache_answer
+                    })
+
                     await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
 
                     continue
@@ -209,9 +214,6 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
                 "user_question": user_question,
                 "answer": content
             })
-
-            if content.startswith(i18n_adapter.get_message(language, message="sorry")):
-                cache.add_not_answer_key_world(query_question, language)
 
             await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
 

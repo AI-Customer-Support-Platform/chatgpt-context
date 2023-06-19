@@ -14,10 +14,12 @@ import random
 from datastore.providers.qdrant_datastore import QdrantDataStore
 from datastore.providers.azure_nlp import AzureClient
 from datastore.providers.redis_chat import RedisChat
+from models.i18n import i18nAdapter
 
 datastore = QdrantDataStore()
 nlp_client = AzureClient()
 cache = RedisChat()
+i18n_adapter = i18nAdapter("languages/local.json")
 
 query_schema = [
     {
@@ -97,7 +99,14 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
                     user_question=question
                 )
     else:
-        func = fallback_func()
+        print(f"{question} Fallback")
+        func = ask_database(
+            user_question=question,
+            query=question,
+            collection=collection,
+            language=language,
+            sorry=sorry
+        )
     
     return func
 
@@ -165,11 +174,17 @@ async def ask_database(user_question: str, query: str, collection: str, language
         model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
     )
     # print(messages)
-
+    final_result = ""
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
         if resp.choices[0].delta is not None:
             content = resp.choices[0].delta.get("content", "")
+            final_result += content
+            # Sorry 申
+            if final_result.startswith(i18n_adapter.get_message(language, message="sorry")):
+                print(f"{user_question} Can't Answer")
+                cache.add_not_answer_key_world(query, language)
+
         elif chunk.choices[0].finish_reason == "stop":
             continue
 
@@ -186,6 +201,7 @@ def chat_response(context: List[DocumentChunkWithScore], user_question: str, sor
     answer = get_chat_completion(messages)
 
     return answer
+
 
 async def get_balance(user_question: str):
     balance = random.randint(1000, 10000)
