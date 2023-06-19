@@ -197,7 +197,7 @@ async def get_balance(user_question: str):
         {
             "role": "function",
             "name": "get_balance",
-            "content": f"{balance} USD"
+            "content": f"User balance is {balance} USD"
         }
     ]
     
