@@ -44,8 +44,8 @@ class RedisChat():
     def add_question_key_word(self, query: str, language: str):
         self.redis.zincrby(f"{language}QuestionKeyWord", 1, query)
     
-    def get_key_word(self, collection: str) -> List[str]:
-        result = self.redis.zrange(collection, 0, 4, desc=True)
+    def get_key_word(self, language: str) -> List[str]:
+        result = self.redis.zrange(f"{language}QuestionKeyWord", 0, 4, desc=True)
         return list(map(codecs.decode, result))
     
     def add_not_answer_key_world(self, query: str, language: str):

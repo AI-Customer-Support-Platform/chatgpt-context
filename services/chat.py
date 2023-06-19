@@ -3,64 +3,115 @@ from models.models import DocumentChunkWithScore
 from models.openai_schemas import OpenAIChatResponse
 from models.chat import ChatHistory
 from models.nlp_schemas import Classify
+from models.models import Query
 from typing import List
 
 import openai
 import json
 import re
+import random
 
-SEARCH = re.compile(r"<search>(.*)<\/search>")
+from datastore.providers.qdrant_datastore import QdrantDataStore
+from datastore.providers.azure_nlp import AzureClient
+from datastore.providers.redis_chat import RedisChat
 
-def classify_question(question: str) -> Classify:
-    messgaes = [
-        {
-            "role": "system",
-            "content": """
-            You will be provided with customer service queries. 
-            Classify each query into a category.
-            Provide your output in json format with the keys.
+datastore = QdrantDataStore()
+nlp_client = AzureClient()
+cache = RedisChat()
 
-            sentiment:
-                - negative
-                - neutral
-                - positive
-            """
-        },
+query_schema = [
+    {
+        "name": "ask_database",
+        "description": "Get the background knowledge of the user's question",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "key_word": {
+                    "type": "string",
+                    "description": "Key words used for database retrieval" 
+                }
+            }
+        }
+    },
+    {
+        "name": "get_balance",
+        "parameters": {
+            "type": "object",
+            "properties": {}
+        }
+    }
+]
+
+
+async def chat_switch(question: str,  history: List[ChatHistory], collection: str, language: str,sorry: str):
+    messages = [
         {
-            "role": "user",
-            "content": "I am very worried about the data problem, can you help me?"
-        },
-        {
-            "role": "assistant",
-            "content": """{"sentiment": "negative"}"""
-        },
-        {
-            "role": "user",
-            "content": question
+            "role": "system", 
+            "content": "Before replying to user questions, please query the database." 
         }
     ]
 
-    completion = get_chat_completion(messgaes, temperature=0)
+    if len(history) > 0:
+        messages.extend(
+            [
+                {
+                    "role": "user",
+                    "content": history[-1]["user_question"]
+                },
+                {
+                    "role": "assistant",
+                    "content": history[-1]["answer"]
+                },
+            ]
+        )
 
-    try:
-        result = Classify(**json.loads(completion))
-    except:
-        result = Classify(sentiment="neutral")
+    messages.append({
+        "role": "user",
+        "content": question
+    })
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=messages,
+        functions=query_schema,
+        temperature=0
+    )
+
+    response_message = response["choices"][0]["message"]
+    if response_message.get("function_call"):
+        function_name = response_message["function_call"]["name"]
+        print(function_name)
+        function_args = json.loads(response_message["function_call"]["arguments"])
+        match function_name:
+            case "ask_database":
+                func = ask_database(
+                    user_question=question,
+                    query=function_args.get("key_word"),
+                    collection=collection,
+                    language=language,
+                    sorry=sorry
+                )
+
+            case "get_balance":
+                func = get_balance(
+                    user_question=question
+                )
+    else:
+        func = fallback_func()
     
-    return result
+    return func
 
 
-def generate_chat(context: str, question: str, sorry: str) -> List[str]:
+def normal_answer(context: str, question: str, sorry: str) -> List[str]:
     # print(f"Context: {context}")
     messages = [
         {
             "role": "system",
             "content": f"""
             Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
-            Only return answer content.
 
             {context}\nUser_Question: {question}
-            Answer:\n
+            Answer (using markdown):\n
             """
         }
     ]
@@ -68,7 +119,7 @@ def generate_chat(context: str, question: str, sorry: str) -> List[str]:
     return messages
 
 
-def negative_chat(context: str, user_question: str, sorry: str) -> List[str]:
+def negative_answer(context: str, user_question: str, sorry: str) -> List[str]:
     # print(f"Context: {context}")
     messages = [
         {
@@ -82,23 +133,33 @@ def negative_chat(context: str, user_question: str, sorry: str) -> List[str]:
             {context}
 
             user_question: {user_question}
+            Answer (using markdown):\n
             """
         }
     ]
 
     return messages
 
-async def generate_chat_response_async(context: List[DocumentChunkWithScore], user_question: str, sorry: str) -> str:
-    context_str = ""
-    for doc in context:
-        context_str += f"{doc.text}\n\"\"\"\n"
-    # print(f"Sorry: {sorry}")
-    sentiment = classify_question(user_question).sentiment
 
+async def ask_database(user_question: str, query: str, collection: str, language: str, sorry: str) -> str:
+    query_results = await datastore.query(
+        [Query(query=query, top_k=3)],
+        collection
+    )
+
+    cache.add_question_key_word(query, language)
+    context_str = ""
+
+    for doc in query_results[0].results:
+        context_str += f"{doc.text}\n\"\"\"\n"
+    
+    sentiment = nlp_client.sentiment_analysis(user_question)
+    print(f"Sentiment: {sentiment}")
+    # sentiment = classify_question(user_question).sentiment
     if sentiment == "negative":
-        messages = negative_chat(context_str, user_question, sorry)
+        messages = negative_answer(context_str, user_question, sorry)
     else:
-        messages = generate_chat(context_str, user_question, sorry)
+        messages = normal_answer(context_str, user_question, sorry)
 
     stream_answer = openai.ChatCompletion.create(
         model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
@@ -114,87 +175,48 @@ async def generate_chat_response_async(context: List[DocumentChunkWithScore], us
 
         yield content
 
-def history_to_query(question: str, history: List[ChatHistory]) -> str:
-    prompt = []
-    if len(history) == 0:
-        practice_round = {
-            "user_question": "Who are the founders of OpenAI?",
-            "query": "<search>OpenAI founders</search>",
-            "background": "<result>The organization was founded in San Francisco in 2015 by Sam Altman, Reid Hoffman, Jessica Livingston, Elon Musk, Ilya Sutskever, Peter Thiel and others, who collectively pledged US$ 1 billion. Musk resigned from the board in 2018 but remained a donor.</result>",
-            "answer": "The founders of OpenAI are Sam Altman, Reid Hoffman, Jessica Livingston, Elon Musk, Ilya Sutskever, Peter Thiel and others."
-        }
-    elif len(history) == 1:
-        practice_round = history[0]
-    else:
-        practice_round = history[-2]
 
+def chat_response(context: List[DocumentChunkWithScore], user_question: str, sorry: str) -> str:
+    context_str = ""
+    for doc in context:
+        context_str += f"{doc.text}\n\"\"\"\n"
+
+    messages = normal_answer(context_str, user_question, sorry)
+
+    answer = get_chat_completion(messages)
+
+    return answer
+
+async def get_balance(user_question: str):
+    balance = random.randint(1000, 10000)
+    messages = [
+        {
+            "role": "user",
+            "content": user_question
+        },
+        {
+            "role": "function",
+            "name": "get_balance",
+            "content": f"{balance} USD"
+        }
+    ]
     
-    prompt.extend([
-        {
-            "role": "user",
-            "content": """
-            From now on, whenever your response depends on any factual information, please search the web by using the function <search>query</search> before responding. 
-            You only need to return the content of the search, no question answering is required.
-            I will then paste web results in, and you can respond.
-            """
-        },
-        {
-            "role": "assistant",
-            "content": "Ok, I will do that. Let's do a practice round"
-        },
-        {
-            "role": "user",
-            "content": practice_round["user_question"]
-        },
-        {
-            "role": "assistant",
-            "content": practice_round["query"]
-        },
-        {
-            "role": "user",
-            "content": practice_round["background"]
-        },
-        {
-            "role": "assistant",
-            "content": practice_round["answer"]
-        },
-        {
-            "role": "assistant",
-            "content": "Ok, I'm ready."
-        }
-    ])
+    stream_answer = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=messages,
+        stream=True, 
+        temperature=0
+    )
 
-    if len(history) > 1:
-        chat = history[-1]
-        prompt.extend([
-            {
-                "role": "user",
-                "content": chat["user_question"]
-            },
-            {
-                "role": "assistant",
-                "content": chat["query"]
-            },
-            {
-                "role": "user",
-                "content": chat["background"]
-            },
-            {
-                "role": "assistant",
-                "content": chat["answer"]
-            }
-        ])
-    
-    prompt.extend([
-        {
-            "role": "user",
-            "content": question
-        }
-    ])
+    for chunk in stream_answer:
+        resp = OpenAIChatResponse(**chunk)
+        if resp.choices[0].delta is not None:
+            content = resp.choices[0].delta.get("content", "")
+        elif chunk.choices[0].finish_reason == "stop":
+            continue
 
-    # print(prompt)
-    completion = get_chat_completion(prompt, temperature=0)
+        yield content
 
-    search_query = re.match(SEARCH, completion).group(1)
-
-    return search_query
+def fallback_func():
+    for content in "Sorry, I don't know how to help with that":
+        yield content

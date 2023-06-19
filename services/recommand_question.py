@@ -1,6 +1,6 @@
 from datastore.providers import qdrant_datastore, redis_chat
 from models.i18n import i18nAdapter
-from services.chat import generate_chat_response_async
+from services.chat import chat_response
 from services.openai import get_chat_completion
 from typing import List
 from models.models import Query
@@ -30,7 +30,8 @@ def generate_question(query_list: List[str], language: str) -> List[str]:
     ]
 
     question_list = get_chat_completion(messages, temperature=0)
-
+    
+    print(generate_question)
     result_list = []
 
     for question_with_keywords in question_list.split("\n"):
@@ -55,14 +56,11 @@ async def answer_question(lang: str, language: str, collection: str):
             collection
         )
 
-        content = ""
-
-        async for data in generate_chat_response_async(
+        content = chat_response(
             context=query_results[0].results, 
             user_question=user_question,
-            sorry=i18n_adapter.get_message(lang, message="sorry")):
-
-            content += data
+            sorry=i18n_adapter.get_message(lang, message="sorry")
+        )
         
         cache.add_faq(user_question, content, lang)
         print(f"{user_question} OK") 
