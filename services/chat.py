@@ -217,6 +217,6 @@ async def get_balance(user_question: str):
 
         yield content
 
-def fallback_func():
+async def fallback_func():
     for content in "Sorry, I don't know how to help with that":
         yield content
