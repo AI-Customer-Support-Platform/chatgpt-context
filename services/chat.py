@@ -84,6 +84,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
         function_name = response_message["function_call"]["name"]
         print(function_name)
         function_args = json.loads(response_message["function_call"]["arguments"])
+        print(function_args)
         match function_name:
             case "ask_database":
                 func = ask_database(
