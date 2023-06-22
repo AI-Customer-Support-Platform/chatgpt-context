@@ -20,14 +20,15 @@ class AzureClient():
     
 
     def sentiment_analysis(self, question: str) -> SentimentAnalysis:
-        documents = [question]
-        result = self.client.analyze_sentiment(documents)
-        docs = [doc for doc in result if not doc.is_error]
+        # documents = [question]
+        # result = self.client.analyze_sentiment(documents)
+        # docs = [doc for doc in result if not doc.is_error]
 
-        if docs:
-            for document in docs:
-                sentiment_result = document.sentiment
-        else:
-            sentiment_result = "neutral"
+        # if docs:
+        #     for document in docs:
+        #         sentiment_result = document.sentiment
+        # else:
+        #     sentiment_result = "neutral"
             
-        return sentiment_result
+        # return sentiment_result
+        return "neutral"
