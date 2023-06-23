@@ -13,7 +13,6 @@ from fastapi import (
     Cookie,
     Response,
 )
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from server.api import knowledge_base
@@ -27,24 +26,18 @@ from datastore.factory import get_datastore, get_redis
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.recommand_question import generate_faq
 from services.chat import chat_switch
+from services.auth0 import validate_get_user
 
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
 from models.chat import AuthMetadata, WebsocketMessage, WebsocketFlag
 from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 
-bearer_scheme = HTTPBearer()
+
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
 assert BEARER_TOKEN is not None
 
-
-def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-    if credentials.scheme != "Bearer" or credentials.credentials != BEARER_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid or missing token")
-    return credentials
-
-
-app = FastAPI(dependencies=[Depends(validate_token)])
+app = FastAPI()
 app.mount("/.well-known", StaticFiles(directory=".well-known"), name="static")
 
 app.add_middleware(
@@ -54,16 +47,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Create a sub-application, in order to access just the query endpoint in an OpenAPI schema, found at http://0.0.0.0:8000/sub/openapi.json when the app is running locally
-sub_app = FastAPI(
-    title="Retrieval Plugin API",
-    description="A retrieval API for querying and filtering documents based on natural language queries and metadata",
-    version="1.0.0",
-    servers=[{"url": "https://your-app-url.com"}],
-    dependencies=[Depends(validate_token)],
-)
-app.mount("/sub", sub_app)
 
 app.include_router(knowledge_base.router)
 

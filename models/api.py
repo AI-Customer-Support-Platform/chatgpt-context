@@ -6,8 +6,8 @@ from models.models import (
 )
 from models.chat import QAHistory
 from pydantic import BaseModel
-from typing import List, Optional
-
+from typing import List, Optional, Any
+from server.db.schemas import Collection
 
 class UpsertRequest(BaseModel):
     documents: List[Document]
@@ -34,6 +34,18 @@ class DeleteRequest(BaseModel):
 class DeleteResponse(BaseModel):
     success: bool
 
+
+class CreateCollectionRequest(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class CreateCollectionResponse(Collection):
+    pass
+
+class UserCollectionResponse(BaseModel):
+    owner: str
+    collections: Any
 
 class ChatRequest(BaseModel):
     question: str
