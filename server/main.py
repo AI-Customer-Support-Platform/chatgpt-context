@@ -26,7 +26,6 @@ from datastore.factory import get_datastore, get_redis
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.recommand_question import generate_faq
 from services.chat import chat_switch
-from services.auth0 import validate_get_user
 
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
