@@ -31,6 +31,9 @@ websockets = "^11.0.3"
 redis = {extras = ["hiredis"], version = "^4.5.5"}
 apscheduler = "^3.10.1"
 azure-ai-textanalytics = "^5.3.0"
+auth0-python = "^4.2.0"
+sqlalchemy = "^2.0.16"
+psycopg2 = "^2.9.6"
 
 [tool.poetry.scripts]
 start = "server.main:start"
