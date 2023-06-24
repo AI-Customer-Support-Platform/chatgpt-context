@@ -35,3 +35,20 @@ def check_collection_owner(db: Session, owner: str, collection_id: UUID):
     if db_collection.owner == owner:
         return True
     return False
+
+def get_collection_by_id(db: Session, collection_id: UUID):
+    db_collection = db.get(models.Collection, collection_id)
+    return db_collection
+
+def create_file(db: Session, file: schemas.DocumentFileCreate) -> UUID:
+    db_file = models.DocumentFile(**file.dict())
+    db.add(db_file)
+    db.commit()
+    db.refresh(db_file)
+
+    return db_file.id
+
+def delete_file(db: Session, file_id: UUID):
+    db_file = db.get(models.DocumentFile, file_id)
+    db.delete(db_file)
+    db.commit()
