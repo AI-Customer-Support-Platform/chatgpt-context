@@ -53,10 +53,10 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
     if credentials.scheme != "Bearer":
         raise HTTPException(status_code=401, detail="Missing token")
     try:
-        user_info = auth0_user.userinfo(credentials.credentials[7:])
+        user_info = auth0_user.userinfo(credentials.credentials)
         if not user_info["email_verified"]:
             raise HTTPException(status_code=401, detail="Email Verification Required")
-        user_id = auth0_user.userinfo(credentials.credentials[7:])["sub"]
+        user_id = auth0_user.userinfo(credentials.credentials)["sub"]
     except Auth0Error:
         raise HTTPException(status_code=401, detail="Invalid token")
 
