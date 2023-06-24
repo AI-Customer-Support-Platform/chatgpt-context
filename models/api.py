@@ -8,6 +8,7 @@ from models.chat import QAHistory
 from pydantic import BaseModel
 from typing import List, Optional, Any
 from server.db.schemas import Collection
+from uuid import UUID
 
 class UpsertRequest(BaseModel):
     documents: List[Document]
@@ -40,12 +41,18 @@ class CreateCollectionRequest(BaseModel):
     description: str | None = None
 
 
-class CreateCollectionResponse(Collection):
-    pass
+class CreateCollectionResponse(BaseModel):
+    id: UUID
+    owner: str
+    name: str
+    description: str
 
 class UserCollectionResponse(BaseModel):
     owner: str
     collections: Any
+
+class CollectionFileResponse(CreateCollectionResponse):
+    documents: Any
 
 class ChatRequest(BaseModel):
     question: str

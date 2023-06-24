@@ -25,6 +25,7 @@ from models.api import (
     UpsertResponse,
     CreateCollectionRequest,
     CreateCollectionResponse,
+    CollectionFileResponse,
     UserCollectionResponse
 )
 from services.file import get_document_from_file
@@ -57,6 +58,7 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
         if not user_info["email_verified"]:
             raise HTTPException(status_code=401, detail="Email Verification Required")
         user_id = auth0_user.userinfo(credentials.credentials)["sub"]
+        # user_id = "test"
     except Auth0Error:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -88,6 +90,8 @@ async def upsert_file(
     collection: UUID,
     file: UploadFile = File(...),
     metadata: Optional[str] = Form(None),
+    file_name: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
     user: str = Depends(validate_user),
 ):
     try:
@@ -99,6 +103,9 @@ async def upsert_file(
     except:
         metadata_obj = DocumentMetadata(source=Source.file)
 
+    document_id = crud.create_file(db, schemas.DocumentFileCreate(file_name=file_name, collection_id=collection))
+    metadata_obj.source_id = str(document_id)
+    print(metadata_obj)
     document = await get_document_from_file(file, metadata_obj)
 
     try:
@@ -158,6 +165,9 @@ async def delete(
     db: Session = Depends(get_db),
 ):
     try:
+        if request.filter.source_id is not None:
+            crud.delete_file(db, request.filter.source_id)
+
         success = await datastore.delete(
             ids=request.ids,
             filter=request.filter,
@@ -209,6 +219,30 @@ def get_collection(
         return UserCollectionResponse(
             owner=user,
             collections=collection
+        )
+
+    except Exception as e:
+        print("Error:", e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
+@router.get(
+    "/collection/query",
+    response_model=CollectionFileResponse,
+)
+def get_colletcion_file(
+    collection_id: UUID,
+    user: str = Depends(validate_token),
+    db: Session = Depends(get_db),
+):
+    try:
+        collection = crud.get_collection_by_id(db, collection_id)
+        
+        return CollectionFileResponse(
+            id=collection.id,
+            owner=collection.owner,
+            name=collection.name,
+            description=collection.description,
+            documents=collection.documents
         )
 
     except Exception as e:
