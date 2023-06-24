@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from . import models, schemas
+import datetime
 
 def get_collection(db: Session, owner: str):
     collections = db.query(models.Collection).filter(models.Collection.owner == owner).all()
@@ -41,11 +42,19 @@ def get_collection_by_id(db: Session, collection_id: UUID):
     return db_collection
 
 def create_file(db: Session, file: schemas.DocumentFileCreate) -> UUID:
+    collection = db.get(models.Collection, file.collection_id)
+
+    collection.updated_at = datetime.datetime.utcnow()
+    db.add(collection)
+    db.commit()
+    db.refresh(collection)
+
     db_file = models.DocumentFile(**file.dict())
+
     db.add(db_file)
     db.commit()
     db.refresh(db_file)
-
+    
     return db_file.id
 
 def delete_file(db: Session, file_id: UUID):

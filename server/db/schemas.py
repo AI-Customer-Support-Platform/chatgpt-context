@@ -21,7 +21,8 @@ class CollectionCreate(CollectionBase):
 
 class Collection(CollectionBase):
     id: UUID
-    create_at: datetime.datetime
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
     documents: List[DocumentFile] = []
 
     class Config:

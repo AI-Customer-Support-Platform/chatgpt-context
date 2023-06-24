@@ -15,7 +15,8 @@ class Collection(Base):
     owner = Column(String, index=True)
     name = Column(String)
     description = Column(String)
-    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow())
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     documents = relationship("DocumentFile", back_populates="collection")
 
@@ -27,6 +28,6 @@ class DocumentFile(Base):
 
     file_name = Column(String, nullable=False)
     collection_id = Column(UUID, ForeignKey("collections.id"))
-    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow())
+    created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     collection = relationship("Collection", back_populates="documents")
