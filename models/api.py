@@ -52,9 +52,11 @@ class UserCollectionResponse(BaseModel):
     owner: str
     collections: Any
 
-class CollectionFileResponse(CreateCollectionResponse):
+class UpdateCollectionResponse(CreateCollectionResponse):
     created_at: datetime.datetime
-    updated_at: datetime.datetime
+    updated_at: datetime.datetime 
+
+class CollectionFileResponse(UpdateCollectionResponse):
     documents: Any
 
 class ChatRequest(BaseModel):

@@ -25,6 +25,7 @@ from models.api import (
     UpsertResponse,
     CreateCollectionRequest,
     CreateCollectionResponse,
+    UpdateCollectionResponse,
     CollectionFileResponse,
     UserCollectionResponse
 )
@@ -154,7 +155,7 @@ async def upsert(
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 
-@router.delete(
+@router.post(
     "/delete/{collection}",
     response_model=DeleteResponse,
 )
@@ -245,6 +246,32 @@ def get_colletcion_file(
             updated_at=collection.updated_at,
             description=collection.description,
             documents=collection.documents
+        )
+
+    except Exception as e:
+        print("Error:", e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
+@router.post(
+    "/collection/update",
+    response_model=UpdateCollectionResponse,
+)
+def update_collection(
+    collection_id: UUID,
+    request: CreateCollectionRequest = Body(...),
+    user: str = Depends(validate_token),
+    db: Session = Depends(get_db),
+):
+    try:
+        collection = crud.update_collection(db, collection_id, schemas.CollectionCreate(**request.dict(), owner=user))
+
+        return UpdateCollectionResponse(
+            id=collection.id,
+            owner=user,
+            name=request.name,
+            description=request.description,
+            created_at=collection.created_at,
+            updated_at=collection.updated_at
         )
 
     except Exception as e:

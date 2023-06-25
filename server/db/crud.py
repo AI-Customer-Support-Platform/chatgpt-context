@@ -23,10 +23,14 @@ def delete_collection(db: Session, collection_id: UUID):
     db.commit()
 
 def update_collection(db: Session, collection_id: UUID, collection: schemas.CollectionCreate):
-    db_collection = db.query(models.Collection).filter(models.Collection.id == collection_id).first()
+    db_collection = db.get(models.Collection, collection_id)
     db_collection.name = collection.name
     db_collection.description = collection.description
+    db_collection.updated_at = datetime.datetime.utcnow()
+    
     db.commit()
+
+    return db_collection
 
 def check_collection_owner(db: Session, owner: str, collection_id: UUID):
     print(f"check_collection_owner: owner: {owner}, collection_id: {collection_id}")
