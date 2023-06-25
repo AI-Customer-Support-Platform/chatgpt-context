@@ -241,6 +241,8 @@ def get_colletcion_file(
             id=collection.id,
             owner=collection.owner,
             name=collection.name,
+            created_at=collection.created_at,
+            updated_at=collection.updated_at,
             description=collection.description,
             documents=collection.documents
         )

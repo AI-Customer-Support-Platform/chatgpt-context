@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Any
 from server.db.schemas import Collection
 from uuid import UUID
+import datetime
 
 class UpsertRequest(BaseModel):
     documents: List[Document]
@@ -52,6 +53,8 @@ class UserCollectionResponse(BaseModel):
     collections: Any
 
 class CollectionFileResponse(CreateCollectionResponse):
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
     documents: Any
 
 class ChatRequest(BaseModel):
