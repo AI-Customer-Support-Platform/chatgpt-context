@@ -166,7 +166,7 @@ async def delete(
     db: Session = Depends(get_db),
 ):
     try:
-        if request.filter.source_id is not None:
+        if request.filter is not None and request.filter.source_id is not None:
             crud.delete_file(db, request.filter.source_id)
 
         success = await datastore.delete(
