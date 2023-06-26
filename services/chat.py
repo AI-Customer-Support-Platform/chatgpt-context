@@ -184,7 +184,7 @@ async def ask_database(user_question: str, query: str, collection: str, language
             # Sorry 申
             if final_result.startswith(i18n_adapter.get_message(language, message="sorry")):
                 print(f"{user_question} Can't Answer")
-                cache.add_not_answer_key_world(query, language)
+                cache.add_not_answer_key_world(query, language, collection)
 
         elif chunk.choices[0].finish_reason == "stop":
             continue

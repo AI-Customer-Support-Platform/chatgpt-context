@@ -18,7 +18,7 @@ def create_collection(db: Session, collection: schemas.CollectionCreate) -> UUID
     return db_collection.id
 
 def delete_collection(db: Session, collection_id: UUID):
-    db_collection = db.query(models.Collection).filter(models.Collection.id == collection_id).first()
+    db_collection = db.get(models.Collection, collection_id)
     db.delete(db_collection)
     db.commit()
 
@@ -27,7 +27,7 @@ def update_collection(db: Session, collection_id: UUID, collection: schemas.Coll
     db_collection.name = collection.name
     db_collection.description = collection.description
     db_collection.updated_at = datetime.datetime.utcnow()
-    
+
     db.commit()
 
     return db_collection
@@ -45,6 +45,10 @@ def get_collection_by_id(db: Session, collection_id: UUID):
     db_collection = db.get(models.Collection, collection_id)
     return db_collection
 
+def get_collection_list(db: Session):
+    collection_list = db.scalars(db.query(models.Collection.id)).all()
+    return collection_list
+    
 def create_file(db: Session, file: schemas.DocumentFileCreate) -> UUID:
     collection = db.get(models.Collection, file.collection_id)
 

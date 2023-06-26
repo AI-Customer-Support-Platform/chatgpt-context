@@ -2,7 +2,7 @@ import redis
 import os
 
 from models.chat import ChatHistory, QAHistory
-from typing import List
+from typing import List, Set
 from utils.common import singleton_with_lock
 
 import codecs
@@ -41,22 +41,38 @@ class RedisChat():
     def user_exists(self, user_id: bytes) -> bool:
         return self.redis.exists(user_id)
     
-    def add_question_key_word(self, query: str, language: str):
-        self.redis.zincrby(f"{language}QuestionKeyWord", 1, query)
+    def add_question_key_word(self, query: str, language: str, collection: str):
+        # self.redis.zincrby(f"{language}QuestionKeyWord", 1, query)
+        self.redis.zadd(f"{collection}::{language}::QuestionKeyWord", 1, query)
     
-    def get_key_word(self, language: str) -> List[str]:
-        result = self.redis.zrange(f"{language}QuestionKeyWord", 0, 4, desc=True)
-        return list(map(codecs.decode, result))
+    def get_key_word(self, language: str, collection: str) -> Set[str]:
+        result = self.redis.zrange(f"{collection}::{language}::QuestionKeyWord", 0, 4, desc=True)
+        return set(map(codecs.decode, result))
     
-    def add_not_answer_key_world(self, query: str, language: str):
-        self.redis.zrem(f"{language}QuestionKeyWord", query)
-        self.redis.zincrby("NotAnswerKeyWord", 1, query)
+    def add_not_answer_key_world(self, query: str, language: str, collection: str):
+        self.redis.zrem(f"{collection}::{language}::QuestionKeyWord", query)
+        self.redis.zincrby(f"{collection}::{language}::NotAnswerKeyWord", 1, query)
     
-    def add_faq(self, question: str, answer: str, language: str):
-        self.redis.hset(f"{language}DailyQuestion", question, answer)
+    def set_keyword_cache(self, query_list: Set[str], language: str, collection: str):
+        self.redis.delete(f"{collection}::{language}::CacheKeyWord")
+        self.redis.sadd(f"{collection}::{language}::CacheKeyWord", *query_list)
     
-    def get_faq_question(self, language: str) -> List[str]:
-        question_list = self.redis.hkeys(f"{language}DailyQuestion")
+    def get_keyword_cache(self, language: str, collection: str) -> Set[str]:
+        result = self.redis.smembers(f"{collection}::{language}::CacheKeyWord")
+        return set(map(codecs.decode, result))
+
+    def add_faq(self, keyword:str, question: str, answer: str, language: str, collection: str):
+        self.redis.hset(f"{collection}::{language}::KeywordToQuestion", keyword, question)
+        self.redis.hset(f"{collection}::{language}::QuestionToAnswer", question, answer)
+    
+    def delete_faq(self, keyword: str, language: str, collection: str):
+        question = self.redis.hget(f"{collection}::{language}::KeywordToQuestion", keyword)
+
+        self.redis.hdel(f"{collection}::{language}::KeywordToQuestion", keyword)
+        self.redis.hdel(f"{collection}::{language}::QuestionToAnswer", question)
+
+    def get_faq_question(self, language: str, collection: str) -> List[str]:
+        question_list = self.redis.hkeys(f"{collection}::{language}::QuestionToAnswer")
         try:
             question_str_list = list(map(codecs.decode, question_list))
         except TypeError:
@@ -64,10 +80,11 @@ class RedisChat():
         
         return question_str_list
 
-    def get_faq_answer(self, question: str, language: str) -> str:
+    def get_faq_answer(self, question: str, language: str, collection: str) -> str:
         try:
-            answer = self.redis.hget(f"{language}DailyQuestion", question)
+            answer = self.redis.hget(f"{collection}::{language}::QuestionToAnswer", question)
             answer_str = codecs.decode(answer)
         except TypeError:
             answer_str = ""
         return answer_str
+    

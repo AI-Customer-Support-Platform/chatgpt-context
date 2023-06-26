@@ -23,7 +23,6 @@ from models.api import (
     ChatHistoryResponse,
 )
 from datastore.factory import get_datastore, get_redis
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.recommand_question import generate_faq
 from services.chat import chat_switch
 
@@ -32,6 +31,7 @@ from models.i18n import i18n, i18nAdapter
 from models.chat import AuthMetadata, WebsocketMessage, WebsocketFlag
 from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 
+from utils.schedulers import AsyncIOSchedulerWrapper
 
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
 assert BEARER_TOKEN is not None
@@ -140,7 +140,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
                 await websocket.send_json(WebsocketMessage(
                     type=WebsocketFlag.questions, 
-                    content=cache.get_faq_question(language)
+                    content=cache.get_faq_question(language, collection)
                 ).dict())
 
                 continue
@@ -160,7 +160,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
             await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
 
             if cache_flag:
-                cache_answer = cache.get_faq_answer(user_question, language)
+                cache_answer = cache.get_faq_answer(user_question, language, collection)
                 if cache_answer:
                     await websocket.send_json(WebsocketMessage(
                         type=WebsocketFlag.answer_body, 
@@ -214,7 +214,7 @@ async def startup():
     global i18n_adapter
     i18n_adapter = i18nAdapter("languages/local.json")
 
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOSchedulerWrapper()
     scheduler.add_job(
         func=generate_faq,
         trigger="cron",
