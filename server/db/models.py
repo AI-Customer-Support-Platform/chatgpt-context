@@ -18,7 +18,7 @@ class Collection(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
-    documents = relationship("DocumentFile", back_populates="collection")
+    documents = relationship("DocumentFile", back_populates="collection", cascade="all, delete-orphan")
 
 
 class DocumentFile(Base):

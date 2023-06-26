@@ -104,11 +104,11 @@ async def upsert_file(
     except:
         metadata_obj = DocumentMetadata(source=Source.file)
 
-    document_id = crud.create_file(db, schemas.DocumentFileCreate(file_name=file_name, collection_id=collection))
-    metadata_obj.source_id = str(document_id)
-    print(metadata_obj)
     document = await get_document_from_file(file, metadata_obj)
 
+    document_id = crud.create_file(db, schemas.DocumentFileCreate(file_name=file_name, collection_id=collection))
+    metadata_obj.source_id = str(document_id)
+    
     try:
         ids = await datastore.upsert([document], collection_name=str(collection))
         return UpsertResponse(ids=ids)
@@ -166,15 +166,16 @@ async def delete(
     db: Session = Depends(get_db),
 ):
     try:
-        if request.filter is not None and request.filter.source_id is not None:
-            crud.delete_file(db, request.filter.source_id)
-
         success = await datastore.delete(
             ids=request.ids,
             filter=request.filter,
             delete_all=request.delete_all,
             collection_name=str(collection)
         )
+
+        if request.filter is not None and request.filter.source_id is not None:
+            crud.delete_file(db, request.filter.source_id)
+
         if request.delete_all:
             crud.delete_collection(db, collection)
 
