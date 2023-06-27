@@ -38,7 +38,8 @@ from server.db.database import SessionLocal, engine
 from sqlalchemy.orm import Session
 
 from auth0.authentication import Users
-from auth0.exceptions import Auth0Error
+from auth0.exceptions import Auth0Error, TokenValidationError
+from services.auth0 import TokenVerifier, AsymmetricSignatureVerifier
 
 router = APIRouter()
 datastore = QdrantDataStore()
@@ -47,11 +48,15 @@ cache = RedisChat()
 bearer_scheme = HTTPBearer()
 
 auth0_domain = os.environ.get('AUTH0_DOMAIN')
+auth0_client_id = os.environ.get('AUTH_CLIENT_ID')
 auth0_user = Users(auth0_domain)
+
+auth0_sv = AsymmetricSignatureVerifier(f"https://{auth0_domain}/.well-known/jwks.json")
+auth0_tv = TokenVerifier(signature_verifier=auth0_sv, issuer=f"https://{auth0_domain}/", audience=auth0_client_id)
 
 models.Base.metadata.create_all(bind=engine)
 
-def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+def validate_user_info(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
     if credentials.scheme != "Bearer":
         raise HTTPException(status_code=401, detail="Missing token")
     try:
@@ -65,6 +70,19 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
 
     return user_id
 
+def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    if credentials.scheme != "Bearer":
+        raise HTTPException(status_code=401, detail="Missing token")
+    try:
+        # print(credentials.credentials)
+        user_info = auth0_tv.verify(credentials.credentials)
+        print(user_info)
+        user_id = user_info["sub"]
+        # user_id = "test"
+    except TokenValidationError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return user_id
 
 def get_db():
     db = SessionLocal()
@@ -190,7 +208,7 @@ async def delete(
 )
 def creat_collection(
     request: CreateCollectionRequest = Body(...),
-    user: str = Depends(validate_token),
+    user: str = Depends(validate_user_info),
     db: Session = Depends(get_db),
 ):
     try:
