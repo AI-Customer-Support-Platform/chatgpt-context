@@ -123,6 +123,9 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         except json.decoder.JSONDecodeError:
             await websocket.close(1003, "error.JSONDecode")
             return
+        except:
+            await websocket.close(1004, "errors.Data")
+            return
 
         match message.type:
             case "switch_lang":
