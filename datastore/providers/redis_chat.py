@@ -43,7 +43,7 @@ class RedisChat():
     
     def add_question_key_word(self, query: str, language: str, collection: str):
         # self.redis.zincrby(f"{language}QuestionKeyWord", 1, query)
-        self.redis.zadd(f"{collection}::{language}::QuestionKeyWord", 1, query)
+        self.redis.zincrby(f"{collection}::{language}::QuestionKeyWord", 1, query)
     
     def get_key_word(self, language: str, collection: str) -> Set[str]:
         result = self.redis.zrange(f"{collection}::{language}::QuestionKeyWord", 0, 4, desc=True)

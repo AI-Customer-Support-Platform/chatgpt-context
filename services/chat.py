@@ -157,7 +157,7 @@ async def ask_database(user_question: str, query: str, collection: str, language
         collection
     )
 
-    cache.add_question_key_word(query, language)
+    cache.add_question_key_word(query, language, collection)
     context_str = ""
 
     for doc in query_results[0].results:
