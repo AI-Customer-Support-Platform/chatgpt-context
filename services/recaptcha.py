@@ -24,6 +24,8 @@ def v3_captcha_verify(user_id: bytes, token: str) -> bool:
     secret = "6Lc553QmAAAAAPbG_PoUw1SERkmWAgSnGqA1VatL"
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
+    print(res.json())
+
     try:
         score = res.json()['score']
     except KeyError:
