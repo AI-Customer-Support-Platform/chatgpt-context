@@ -16,6 +16,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from server.api import knowledge_base
+from loguru import logger
 
 from models.api import (
     ChatRequest,
@@ -89,7 +90,7 @@ async def chat(
 
         return ChatResponse(response=chat_response, model=request.model)
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error") 
 
 
@@ -158,7 +159,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
         if recaptcha:
             user_question = message.content.question
             cache_flag = message.content.cache
-            print(f"{user_id} asked: {user_question}")
+            logger.info(f"{user_id} asked: {user_question}")
 
             await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
 

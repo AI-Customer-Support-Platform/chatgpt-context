@@ -14,6 +14,7 @@ from fastapi import (
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Annotated
+from loguru import logger
 
 from models.models import DocumentMetadata, Source
 from models.api import (
@@ -76,7 +77,6 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
     try:
         # print(credentials.credentials)
         user_info = auth0_tv.verify(credentials.credentials)
-        print(user_info)
         user_id = user_info["sub"]
         # user_id = "test"
     except TokenValidationError:
@@ -131,7 +131,7 @@ async def upsert_file(
         ids = await datastore.upsert([document], collection_name=str(collection))
         return UpsertResponse(ids=ids)
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail=f"str({e})")
 
 
@@ -151,7 +151,7 @@ async def query_main(
         )
         return QueryResponse(results=results)
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 
@@ -169,7 +169,7 @@ async def upsert(
         ids = await datastore.upsert(request.documents, collection_name=str(collection))
         return UpsertResponse(ids=ids)
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 
@@ -199,7 +199,7 @@ async def delete(
 
         return DeleteResponse(success=success)
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @router.put(
@@ -222,7 +222,7 @@ def creat_collection(
         )
 
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @router.get(
@@ -242,7 +242,7 @@ def get_collection(
         )
 
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @router.get(
@@ -268,7 +268,7 @@ def get_colletcion_file(
         )
 
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @router.post(
@@ -294,5 +294,5 @@ def update_collection(
         )
 
     except Exception as e:
-        print("Error:", e)
+        logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")

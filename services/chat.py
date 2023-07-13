@@ -15,6 +15,7 @@ from datastore.providers.qdrant_datastore import QdrantDataStore
 from datastore.providers.azure_nlp import AzureClient
 from datastore.providers.redis_chat import RedisChat
 from models.i18n import i18nAdapter
+from loguru import logger
 
 datastore = QdrantDataStore()
 nlp_client = AzureClient()
@@ -82,9 +83,8 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     response_message = response["choices"][0]["message"]
     if response_message.get("function_call"):
         function_name = response_message["function_call"]["name"]
-        print(function_name)
         function_args = json.loads(response_message["function_call"]["arguments"])
-        print(function_args)
+        logger.info(f"Function name: {function_name} Args: {function_args}")
         match function_name:
             case "ask_database":
                 func = ask_database(
@@ -100,7 +100,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
                     user_question=question
                 )
     else:
-        print(f"{question} Fallback")
+        logger.warning(f"{question} Fallback")
         func = ask_database(
             user_question=question,
             query=question,
@@ -164,7 +164,7 @@ async def ask_database(user_question: str, query: str, collection: str, language
         context_str += f"{doc.text}\n\"\"\"\n"
     
     sentiment = nlp_client.sentiment_analysis(user_question)
-    print(f"Sentiment: {sentiment}")
+    logger.info(f"Quseion: {user_question} Sentiment: {sentiment}")
     # sentiment = classify_question(user_question).sentiment
     if sentiment == "negative":
         messages = negative_answer(context_str, user_question, sorry)

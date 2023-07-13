@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import List
 from . import models, schemas
 import datetime
+from loguru import logger
 
 def get_collection(db: Session, owner: str):
     collections = db.query(models.Collection).filter(models.Collection.owner == owner).all()
@@ -33,7 +34,7 @@ def update_collection(db: Session, collection_id: UUID, collection: schemas.Coll
     return db_collection
 
 def check_collection_owner(db: Session, owner: str, collection_id: UUID):
-    print(f"check_collection_owner: owner: {owner}, collection_id: {collection_id}")
+    logger.info(f"check_collection_owner: owner: {owner}, collection_id: {collection_id}")
     db_collection = db.query(models.Collection).filter(models.Collection.id == collection_id).first()
     if db_collection is None:
         return False

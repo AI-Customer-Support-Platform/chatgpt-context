@@ -1,5 +1,6 @@
 import requests
 from datastore.providers.redis_chat import RedisChat
+from loguru import logger
 
 cache = RedisChat()
 
@@ -9,6 +10,8 @@ def v2_captcha_verify(user_id: bytes, token: str) -> bool:
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
     succ = res.json()["success"]
+
+    logger.info(succ)
 
     if succ:
         cache.redis.srem("captcha", user_id)
@@ -24,7 +27,7 @@ def v3_captcha_verify(user_id: bytes, token: str) -> bool:
     secret = "6Lc553QmAAAAAPbG_PoUw1SERkmWAgSnGqA1VatL"
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
-    print(res.json())
+    logger.info(res.json())
 
     try:
         score = res.json()['score']

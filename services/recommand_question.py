@@ -10,6 +10,7 @@ from models.models import Query
 import json
 import asyncio
 import datetime
+from loguru import logger
 
 from utils.schedulers import AsyncIOSchedulerWrapper
 
@@ -52,11 +53,12 @@ async def answer_question(lang: str, query: str, question: str, collection: str)
         sorry=i18n_adapter.get_message(lang, message="sorry")
     )
     
-    print(f"{question} OK") 
+    logger.info(f"{question} OK") 
 
     return content
 
 async def collection_question_recommand(collecion_id: str):
+    logger.info(f"{collecion_id} start recommand")
     for lang in i18n_adapter.get_support_language():
         language = i18n_adapter.get_message(lang, "language")
         query_set = cache.get_key_word(lang, collecion_id)
@@ -65,16 +67,15 @@ async def collection_question_recommand(collecion_id: str):
 
         cache_set = cache.get_keyword_cache(lang, collecion_id)
 
-        print(f"Cache set: {cache_set}")
+        logger.info(f"Cache set: {cache_set}")
 
         add_key_word = query_set - cache_set
         delete_key_word = cache_set - query_set
 
-        print(f"Add Key Word: {add_key_word}")
-        print(f"Delete Key Word: {delete_key_word}")
+        logger.info(f"Add Key Word: {add_key_word}")
+        logger.info(f"Delete Key Word: {delete_key_word}")
 
         if add_key_word:
-            print("Add Key Word")
             for key_word in add_key_word:
                 question = generate_question(key_word, language)
                 answer = await answer_question(lang, key_word, question, collecion_id)
@@ -82,7 +83,6 @@ async def collection_question_recommand(collecion_id: str):
                 cache.add_faq(key_word, question, answer, lang, collecion_id)
 
         if delete_key_word:
-            print("Delete Key Word")
             for key_word in delete_key_word:
                 cache.delete_faq(key_word, lang, collecion_id)
 

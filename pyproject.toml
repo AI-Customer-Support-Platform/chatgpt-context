@@ -34,6 +34,7 @@ azure-ai-textanalytics = "^5.3.0"
 auth0-python = "^4.2.0"
 sqlalchemy = "^2.0.16"
 psycopg2 = "^2.9.6"
+loguru = "^0.7.0"
 
 [tool.poetry.scripts]
 start = "server.main:start"
