@@ -1,4 +1,4 @@
-import os
+
 from uuid import UUID
 
 from fastapi import (
@@ -12,7 +12,6 @@ from fastapi import (
     Response,
     APIRouter
 )
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Annotated
 from loguru import logger
 
@@ -35,61 +34,12 @@ from datastore.providers.qdrant_datastore import QdrantDataStore
 from datastore.providers.redis_chat import RedisChat
 
 from server.db import crud, models, schemas
-from server.db.database import SessionLocal, engine
+from .deps import get_db, validate_user_info, validate_token
 from sqlalchemy.orm import Session
-
-from auth0.authentication import Users
-from auth0.exceptions import Auth0Error, TokenValidationError
-from services.auth0 import TokenVerifier, AsymmetricSignatureVerifier
 
 router = APIRouter()
 datastore = QdrantDataStore()
 cache = RedisChat()
-
-bearer_scheme = HTTPBearer()
-
-auth0_domain = os.environ.get('AUTH0_DOMAIN')
-auth0_client_id = os.environ.get('AUTH_CLIENT_ID')
-auth0_user = Users(auth0_domain)
-
-auth0_sv = AsymmetricSignatureVerifier(f"https://{auth0_domain}/.well-known/jwks.json")
-auth0_tv = TokenVerifier(signature_verifier=auth0_sv, issuer=f"https://{auth0_domain}/", audience=auth0_client_id)
-
-models.Base.metadata.create_all(bind=engine)
-
-def validate_user_info(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-    if credentials.scheme != "Bearer":
-        raise HTTPException(status_code=401, detail="Missing token")
-    try:
-        user_info = auth0_user.userinfo(credentials.credentials)
-        if not user_info["email_verified"]:
-            raise HTTPException(status_code=401, detail="Email Verification Required")
-        user_id = auth0_user.userinfo(credentials.credentials)["sub"]
-        # user_id = "test"
-    except Auth0Error:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    return user_id
-
-def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
-    if credentials.scheme != "Bearer":
-        raise HTTPException(status_code=401, detail="Missing token")
-    try:
-        # print(credentials.credentials)
-        user_info = auth0_tv.verify(credentials.credentials)
-        user_id = user_info["sub"]
-        # user_id = "test"
-    except TokenValidationError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    return user_id
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def validate_user(
     collection: UUID,
