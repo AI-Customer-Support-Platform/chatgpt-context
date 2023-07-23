@@ -70,3 +70,10 @@ def delete_file(db: Session, file_id: UUID):
     db_file = db.get(models.DocumentFile, file_id)
     db.delete(db_file)
     db.commit()
+
+def add_user_stripe_id(db: Session, email: str, stripe_id: str):
+    user = db.query(models.User).filter(models.User.email == email).first()
+    user.stripe_id = stripe_id
+    db.add(user)
+    db.commit()
+    

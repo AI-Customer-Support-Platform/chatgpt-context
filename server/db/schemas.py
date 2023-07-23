@@ -27,3 +27,22 @@ class Collection(CollectionBase):
 
     class Config:
         orm_mode = True
+
+class UserBase(BaseModel):
+    owner: str
+    email: str
+    stripe_id: str | None = None
+
+class PlanBase(BaseModel):
+    platform: str
+    plan: str
+    suscription_id: str
+
+class PlanCreate(PlanBase):
+    pass
+
+class Plan(PlanBase):
+    id: int
+
+class User(UserBase):
+    plans: List[Plan] = []

@@ -35,13 +35,11 @@ class DocumentFile(Base):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-
-    owner = Column(String, index=True)
+    owner = Column(String, primary_key=True, index=True)
     email = Column(String)
     stripe_id = Column(String)
 
-    plans = relationship("Plan", back_populates="users", cascade="all, delete-orphan")
+    plans = relationship("Plan", back_populates="user", cascade="all, delete-orphan")
 
 class Plan(Base):
     __tablename__ = "plans"
@@ -51,5 +49,6 @@ class Plan(Base):
     platform = Column(String)
     plan = Column(String)
     suscription_id = Column(String)
-
+    user_id = Column(String, ForeignKey("users.owner"))
+    
     user = relationship("User", back_populates="plans")
