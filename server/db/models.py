@@ -1,7 +1,7 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import UUID
 
@@ -31,3 +31,25 @@ class DocumentFile(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     collection = relationship("Collection", back_populates="documents")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    owner = Column(String, index=True)
+    email = Column(String)
+    stripe_id = Column(String)
+
+    plans = relationship("Plan", back_populates="users", cascade="all, delete-orphan")
+
+class Plan(Base):
+    __tablename__ = "plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    platform = Column(String)
+    plan = Column(String)
+    suscription_id = Column(String)
+
+    user = relationship("User", back_populates="plans")
