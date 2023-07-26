@@ -1,8 +1,8 @@
-"""Add user with suscription
+"""Add supscription with user
 
-Revision ID: 5ca8dbcc4466
+Revision ID: 90d0fce6a44f
 Revises: 
-Create Date: 2023-07-23 23:06:23.383147
+Create Date: 2023-07-24 12:47:35.395316
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5ca8dbcc4466'
+revision = '90d0fce6a44f'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,16 +22,17 @@ def upgrade():
     sa.Column('owner', sa.String(), nullable=False),
     sa.Column('email', sa.String(), nullable=True),
     sa.Column('stripe_id', sa.String(), nullable=True),
-    sa.PrimaryKeyConstraint('owner')
+    sa.PrimaryKeyConstraint('owner'),
+    sa.UniqueConstraint('stripe_id')
     )
     op.create_index(op.f('ix_users_owner'), 'users', ['owner'], unique=False)
     op.create_table('plans',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('platform', sa.String(), nullable=True),
     sa.Column('plan', sa.String(), nullable=True),
-    sa.Column('suscription_id', sa.String(), nullable=True),
-    sa.Column('user_id', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.owner'], ),
+    sa.Column('subscription_id', sa.String(), nullable=True),
+    sa.Column('stripe_id', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['stripe_id'], ['users.stripe_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_plans_id'), 'plans', ['id'], unique=False)

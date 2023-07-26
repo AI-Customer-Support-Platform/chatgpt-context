@@ -32,14 +32,14 @@ class DocumentFile(Base):
 
     collection = relationship("Collection", back_populates="documents")
 
+
 class User(Base):
     __tablename__ = "users"
 
     owner = Column(String, primary_key=True, index=True)
     email = Column(String)
-    stripe_id = Column(String)
+    stripe_id = Column(String, unique=True)
 
-    plans = relationship("Plan", back_populates="user", cascade="all, delete-orphan")
 
 class Plan(Base):
     __tablename__ = "plans"
@@ -48,7 +48,23 @@ class Plan(Base):
 
     platform = Column(String)
     plan = Column(String)
-    suscription_id = Column(String)
-    user_id = Column(String, ForeignKey("users.owner"))
-    
-    user = relationship("User", back_populates="plans")
+    subscription_id = Column(String)
+
+    file_remaining = Column(Integer, default=0)
+    token_remaining = Column(Integer, default=0)
+
+    stripe_id = Column(String, ForeignKey("users.stripe_id"))
+
+    user = relationship("User", backref="plans")
+
+class PlanConfig(Base):
+    __tablename__ = "plan_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    price_id = Column(String, index=True)
+    platform = Column(String)
+    plan = Column(String)
+
+    file_limit = Column(Integer)
+    token_limit = Column(Integer)

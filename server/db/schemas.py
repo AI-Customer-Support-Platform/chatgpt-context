@@ -46,3 +46,14 @@ class Plan(PlanBase):
 
 class User(UserBase):
     plans: List[Plan] = []
+
+    class Config:
+        orm_mode = True
+
+class PlanConfig(BaseModel):
+    price_id: str
+    platform: str
+    plan: str
+    
+    file_limit: int
+    token_limit: int
