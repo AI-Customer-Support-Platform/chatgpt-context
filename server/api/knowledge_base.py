@@ -63,6 +63,14 @@ async def upsert_file(
     db: Session = Depends(get_db),
     user: str = Depends(validate_user),
 ):
+    file_space = file.file.seek(0, 2)
+    sum_file_size = cache.redis.incr("{user}::file", file_space)
+
+    file_limit = crud.get_file_limit(db, user)
+    print(file_limit)
+    print(sum_file_size)
+    if file_space > file_limit:
+        raise HTTPException(status_code=429, detail="File size limit exceeded")
     try:
         metadata_obj = (
             DocumentMetadata.parse_raw(metadata)

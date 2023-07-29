@@ -93,14 +93,20 @@ def get_user_by_owner(db: Session, owner: str) -> str:
 
 def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str):
     plan = get_plan_config(db, price_id)
-    db_plan = models.Plan(
-        stripe_id=stripe_id, 
-        plan=plan.plan, 
-        platform=plan.platform,
-        subscription_id=subscription_id,
-        file_remaining=plan.file_limit,
-        token_remaining=plan.token_limit
-    )
+    db_plan = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
+    if db_plan is not None:
+        db_plan.file_remaining = plan.file_limit
+        db_plan.token_remaining = plan.token_limit
+    else:
+        db_plan = models.Plan(
+            stripe_id=stripe_id, 
+            plan=plan.plan, 
+            platform=plan.platform,
+            subscription_id=subscription_id,
+            file_remaining=plan.file_limit,
+            token_remaining=plan.token_limit
+        )
+
     db.add(db_plan)
     db.commit()
 
@@ -116,6 +122,11 @@ def get_plan_config(db: Session, price_id: str) -> schemas.PlanConfig:
 def get_price_id(db: Session, plan: SubscriptionType, platform: SubscriptionPlatform) -> str:
     plan_config = db.query(models.PlanConfig).filter(models.PlanConfig.plan == plan.value, models.PlanConfig.platform == platform.value).first()
     return plan_config.price_id
+
+def get_file_limit(db: Session, owner: str):
+    user = db.query(models.User).filter(models.User.owner == owner).first().stripe_id
+    user_plan = db.query(models.Plan).filter(models.Plan.stripe_id == user).order_by(models.Plan.id.desc()).first()
+    return user_plan.file_remaining
 
 # def delete_plan(db: Session, plan_id: UUID):
 #     db_plan = db.get(models.Plan, plan_id)
