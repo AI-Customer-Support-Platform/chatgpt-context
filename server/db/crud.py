@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from . import models, schemas
+from models.payments import SubscriptionPlatform, SubscriptionType
 import datetime
 from loguru import logger
 
@@ -71,9 +72,52 @@ def delete_file(db: Session, file_id: UUID):
     db.delete(db_file)
     db.commit()
 
+def add_user(db: Session, owner: str, email: str):
+    db_user = models.User(owner=owner, email=email)
+    db.merge(db_user)
+    db.commit()
+
 def add_user_stripe_id(db: Session, email: str, stripe_id: str):
     user = db.query(models.User).filter(models.User.email == email).first()
     user.stripe_id = stripe_id
     db.add(user)
     db.commit()
-    
+
+def get_user_stripe_id(db: Session, email: str) -> str:
+    user = db.query(models.User).filter(models.User.email == email).first()
+    return user.stripe_id
+
+def get_user_by_owner(db: Session, owner: str) -> str:
+    user = db.get(models.User, owner)
+    return user.stripe_id
+
+def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str):
+    plan = get_plan_config(db, price_id)
+    db_plan = models.Plan(
+        stripe_id=stripe_id, 
+        plan=plan.plan, 
+        platform=plan.platform,
+        subscription_id=subscription_id,
+        file_remaining=plan.file_limit,
+        token_remaining=plan.token_limit
+    )
+    db.add(db_plan)
+    db.commit()
+
+def delete_plan(db: Session, subscription_id: str):
+    db_plan = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
+    db.delete(db_plan)
+    db.commit()
+
+def get_plan_config(db: Session, price_id: str) -> schemas.PlanConfig:
+    plan_config = db.query(models.PlanConfig).filter(models.PlanConfig.price_id == price_id).first()
+    return plan_config
+
+def get_price_id(db: Session, plan: SubscriptionType, platform: SubscriptionPlatform) -> str:
+    plan_config = db.query(models.PlanConfig).filter(models.PlanConfig.plan == plan.value, models.PlanConfig.platform == platform.value).first()
+    return plan_config.price_id
+
+# def delete_plan(db: Session, plan_id: UUID):
+#     db_plan = db.get(models.Plan, plan_id)
+#     db.delete(db_plan)
+#     db.commit()

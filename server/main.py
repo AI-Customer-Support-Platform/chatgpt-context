@@ -15,7 +15,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from server.api import knowledge_base
+from server.api import knowledge_base, payment
 from loguru import logger
 
 from models.api import (
@@ -49,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(knowledge_base.router)
+app.include_router(payment.router)
 
 @app.get("/history/{user_id}", response_model=ChatHistoryResponse)
 async def chat_history(response: Response, user_id: str):

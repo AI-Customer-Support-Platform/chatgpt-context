@@ -5,6 +5,7 @@ from models.models import (
     QueryResult
 )
 from models.chat import QAHistory
+from models.payments import SubscriptionPlatform, SubscriptionType
 from pydantic import BaseModel
 from typing import List, Optional, Any
 from server.db.schemas import Collection
@@ -72,3 +73,8 @@ class ChatHistoryResponse(BaseModel):
     user_id: str
     exist: bool = False
     history: List[QAHistory]
+
+class CreateStripeSubscriptionRequest(BaseModel):
+    api: SubscriptionPlatform
+    plan: SubscriptionType
+    url: str

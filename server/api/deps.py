@@ -44,15 +44,15 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
     if credentials.scheme != "Bearer":
         raise HTTPException(status_code=401, detail="Missing token")
     try:
-        # user_info = auth0_tv.verify(credentials.credentials)
-        # user_id = user_info["sub"]
-        user_id = "test"
+        user_info = auth0_tv.verify(credentials.credentials)
+        user_id = user_info["sub"]
+        # user_id = "google-oauth2|117555982445537943180"
     except TokenValidationError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     return user_id
 
-def get_user_email(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+def get_user_info(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
     if credentials.scheme != "Bearer":
         raise HTTPException(status_code=401, detail="Missing token")
     try:
@@ -60,8 +60,7 @@ def get_user_email(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
 
         if not user_info["email_verified"]:
             raise HTTPException(status_code=401, detail="Email Verification Required")
-        user_email = user_info["email"]
     except Auth0Error:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    return user_email
+    return user_info
