@@ -43,7 +43,7 @@ async def create_checkout_session(
 
     if stripe_user_id:
         checkout_session = stripe.checkout.Session.create(
-            success_url=f"{callback_url}"+ "/success.html?session_id={CHECKOUT_SESSION_ID}",
+            success_url=f"{callback_url}" + "/success.html?session_id={CHECKOUT_SESSION_ID}",
             cancel_url=f'{callback_url}/canceled.html',
             mode="subscription",
             customer=stripe_user_id,
@@ -57,7 +57,7 @@ async def create_checkout_session(
         )
     else:
         checkout_session = stripe.checkout.Session.create(
-            success_url=f"{callback_url}"+ "success.html?session_id={CHECKOUT_SESSION_ID}",
+            success_url=f"{callback_url}/"+ "success.html?session_id={CHECKOUT_SESSION_ID}",
             cancel_url=f'{callback_url}/canceled.html',
             mode="subscription",
             customer_email=user_info["email"],
@@ -119,6 +119,8 @@ async def stripe_webhook(
         price_id = event_data["object"]["lines"]["data"][0]["price"]["id"]
         subscription_id = event_data["object"]["lines"]["data"][0]["subscription"]
 
+        cache.redis.delete(f"{stripe_id}::reach_limit")
+
         crud.add_plan(db, stripe_id, price_id, subscription_id)
     
     if event["type"] == "customer.subscription.updated":
@@ -126,6 +128,8 @@ async def stripe_webhook(
         price_id = event_data["object"]["plan"]["id"]
         subscription_id = event_data["object"]["id"]
 
+        cache.redis.delete(f"{stripe_id}::reach_limit")
+        
         crud.add_plan(db, stripe_id, price_id, subscription_id)
         
     if event["type"] == "customer.subscription.deleted":
