@@ -43,8 +43,8 @@ async def create_checkout_session(
 
     if stripe_user_id:
         checkout_session = stripe.checkout.Session.create(
-            success_url=f"{callback_url}" + "/success.html?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=f'{callback_url}/canceled.html',
+            success_url=callback_url,
+            cancel_url=callback_url,
             mode="subscription",
             customer=stripe_user_id,
             metadata=metadata,
@@ -57,8 +57,8 @@ async def create_checkout_session(
         )
     else:
         checkout_session = stripe.checkout.Session.create(
-            success_url=f"{callback_url}/"+ "success.html?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=f'{callback_url}/canceled.html',
+            success_url=callback_url,
+            cancel_url=callback_url,
             mode="subscription",
             customer_email=user_info["email"],
             metadata=metadata,
