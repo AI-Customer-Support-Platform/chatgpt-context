@@ -1,10 +1,18 @@
+import os
 from sqlalchemy.orm import Session
+
+from redis import Redis
+import codecs
+
 from uuid import UUID
 from typing import List
 from . import models, schemas
 from models.payments import SubscriptionPlatform, SubscriptionType
 import datetime
 from loguru import logger
+
+import stripe
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
 def get_collection(db: Session, owner: str):
     collections = db.query(models.Collection).filter(models.Collection.owner == owner).all()
@@ -91,12 +99,14 @@ def get_user_by_owner(db: Session, owner: str) -> str:
     user = db.get(models.User, owner)
     return user.stripe_id
 
-def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str):
+def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str, start_at: datetime.datetime, end_at: datetime.datetime):
     plan = get_plan_config(db, price_id)
     db_plan = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
     if db_plan is not None:
         db_plan.file_remaining = plan.file_limit
         db_plan.token_remaining = plan.token_limit
+        db_plan.start_at = start_at
+        db_plan.expire_at = end_at
     else:
         db_plan = models.Plan(
             stripe_id=stripe_id, 
@@ -104,7 +114,9 @@ def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str):
             platform=plan.platform,
             subscription_id=subscription_id,
             file_remaining=plan.file_limit,
-            token_remaining=plan.token_limit
+            token_remaining=plan.token_limit,
+            start_at=start_at,
+            expire_at=end_at
         )
 
     db.add(db_plan)
@@ -128,7 +140,47 @@ def get_file_limit(db: Session, owner: str):
     user_plan = db.query(models.Plan).filter(models.Plan.stripe_id == user).order_by(models.Plan.id.desc()).first()
     return user_plan.file_remaining
 
-# def delete_plan(db: Session, plan_id: UUID):
-#     db_plan = db.get(models.Plan, plan_id)
-#     db.delete(db_plan)
-#     db.commit()
+def get_collection_stripe_id(db: Session, client: Redis, collection_id: UUID):
+    if client.exists(f"{collection_id}::stripe"):
+        user = codecs.decode(client.get(f"{collection_id}::stripe"))
+    else:
+        owner = db.get(models.Collection, collection_id).owner
+        user = db.query(models.User).filter(models.User.owner == owner).first().stripe_id
+        client.set(f"{collection_id}::stripe", user)
+
+    return user
+
+def minus_token_remaining(db: Session, client: Redis, stripe_id: str, token_count: int):
+    user_plan = db.query(models.Plan).filter(models.Plan.stripe_id == stripe_id).order_by(models.Plan.token_remaining.desc()).first()
+
+    if user_plan.token_remaining > 0:
+        user_plan.token_remaining -= token_count
+        db.commit()
+    else:
+        logger.debug(f"Start Invoice Send")
+        invoice = stripe.Invoice.create(
+            customer=stripe_id,
+            collection_method="send_invoice",
+            auto_advance=True,
+            days_until_due=15
+        )
+        price_id = get_user_plan_price(db, stripe_id, "web")
+        stripe.InvoiceItem.create(
+            customer=stripe_id,
+            price=price_id,
+            invoice=invoice.id
+        )
+        stripe.Invoice.send_invoice(invoice.id)
+
+        client.set(f"{stripe_id}::reach_limit", 1)
+
+
+def get_user_plan_price(db: Session, stripe_id: str, platform: str):
+    user_plan = db.query(models.Plan).filter(models.Plan.stripe_id == stripe_id).order_by(models.Plan.token_remaining.desc()).first().plan
+    price_id = db.query(models.PlanConfig).filter(
+        models.PlanConfig.platform == platform, 
+        models.PlanConfig.plan == user_plan,
+        models.PlanConfig.is_subscription == False
+    ).first().price_id
+
+    return price_id
