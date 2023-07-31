@@ -12,7 +12,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from datastore.providers.redis_chat import RedisChat
-from models.api import CreateStripeSubscriptionRequest
+from models.api import CreateStripeSubscriptionRequest, RedirectUrlResponse
 from server.db import crud, models, schemas
 from .deps import get_db, get_user_info, validate_token
 
@@ -23,8 +23,7 @@ cache = RedisChat()
 
 @router.post(
     "/plan/create",
-    response_class=RedirectResponse,
-    status_code=303
+    response_model=RedirectUrlResponse,
 )
 async def create_checkout_session(
     request: CreateStripeSubscriptionRequest = Body(...),
@@ -70,12 +69,11 @@ async def create_checkout_session(
             ]
         )
     
-    return checkout_session.url
+    return RedirectUrlResponse(url=checkout_session.url)
 
 @router.get(
     "/plan/update",
-    response_class=RedirectResponse,
-    status_code=303
+    response_model=RedirectUrlResponse,
 )
 async def create_checkout_session(
     user_id: dict = Depends(validate_token),
@@ -87,7 +85,7 @@ async def create_checkout_session(
         return_url="https://chatbot-manager.vercel.app/"
     )
 
-    return session.url
+    return RedirectUrlResponse(url=checkout_session.url)
 
 @router.post(
     "/stripe/webhook"

@@ -78,3 +78,6 @@ class CreateStripeSubscriptionRequest(BaseModel):
     api: SubscriptionPlatform
     plan: SubscriptionType
     url: str
+
+class RedirectUrlResponse(BaseModel):
+    url: str
