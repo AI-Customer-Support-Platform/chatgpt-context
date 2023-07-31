@@ -201,3 +201,8 @@ def get_document_chunks(
         chunk.embedding = embeddings[i]
 
     return chunks
+
+def token_count(string: str) -> int:
+    """Returns the number of tokens in a text string."""
+    num_tokens = len(tokenizer.encode(string))
+    return num_tokens
