@@ -64,7 +64,7 @@ async def upsert_file(
     user: str = Depends(validate_user),
 ):
     file_space = file.file.seek(0, 2)
-    sum_file_size = cache.redis.incr("{user}::file", file_space)
+    sum_file_size = cache.redis.incr(f"{user}::file", file_space)
 
     file_limit = crud.get_file_limit(db, user)
 
