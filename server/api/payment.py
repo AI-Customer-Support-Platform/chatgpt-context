@@ -85,7 +85,7 @@ async def create_checkout_session(
         return_url="https://chatbot-manager.vercel.app/"
     )
 
-    return RedirectUrlResponse(url=checkout_session.url)
+    return RedirectUrlResponse(url=session.url)
 
 @router.post(
     "/stripe/webhook"
