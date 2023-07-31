@@ -1,18 +1,20 @@
 import os
 import stripe
+from datetime import datetime
 from fastapi import (
     APIRouter,
     Depends,
     Request,
     Body,
-    Header
+    Header,
+    HTTPException
 )
 from fastapi.responses import RedirectResponse
 from loguru import logger
 from sqlalchemy.orm import Session
 
 from datastore.providers.redis_chat import RedisChat
-from models.api import CreateStripeSubscriptionRequest, RedirectUrlResponse
+from models.api import CreateStripeSubscriptionRequest, RedirectUrlResponse, SubscriptionInfoReturn
 from server.db import crud, models, schemas
 from .deps import get_db, get_user_info, validate_token
 
@@ -87,6 +89,23 @@ async def create_checkout_session(
 
     return RedirectUrlResponse(url=session.url)
 
+@router.get(
+    "/user/plan",
+    response_model=SubscriptionInfoReturn,
+)
+async def get_subscription_info(
+    user_id: dict = Depends(validate_token),
+    db: Session = Depends(get_db),
+):
+    stripe_id = crud.get_user_by_owner(db, user_id)
+    try:
+        subscription_info = crud.get_subscription_info(db, cache.redis, stripe_id, user_id)
+
+        return SubscriptionInfoReturn(**subscription_info)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
 @router.post(
     "/stripe/webhook"
 )
@@ -117,10 +136,14 @@ async def stripe_webhook(
         price_id = event_data["object"]["lines"]["data"][0]["price"]["id"]
         subscription_id = event_data["object"]["lines"]["data"][0]["subscription"]
 
+        start_at = datetime.fromtimestamp(event_data["object"]["lines"]["data"][0]["period"]["start"])
+        end_at = datetime.fromtimestamp(event_data["object"]["lines"]["data"][0]["period"]["end"])
+
         cache.redis.delete(f"{stripe_id}::reach_limit")
 
-        crud.add_plan(db, stripe_id, price_id, subscription_id)
-    
+        crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
+
+
     if event["type"] == "customer.subscription.updated":
         stripe_id = event_data["object"]["customer"]
         price_id = event_data["object"]["plan"]["id"]

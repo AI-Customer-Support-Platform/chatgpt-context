@@ -1,5 +1,6 @@
 import os
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 
 from redis import Redis
 import codecs
@@ -184,3 +185,44 @@ def get_user_plan_price(db: Session, stripe_id: str, platform: str):
     ).first().price_id
 
     return price_id
+
+
+def get_subscription_info(db: Session, client: Redis, stripe_id: str, user: str):
+    # Group by platform and sum all plan's remaining tokens
+    user_plan = db.query(
+            models.Plan.platform, 
+            func.sum(models.Plan.token_remaining).label("token_remaining")
+        ).filter(
+            models.Plan.stripe_id == stripe_id
+        ).group_by(models.Plan.platform).all()
+
+    data = {}
+    for row in user_plan:
+        platform = row.platform
+
+        newest_plan = db.query(models.Plan).filter(
+            models.Plan.stripe_id == stripe_id, models.Plan.platform == platform
+        ).order_by(models.Plan.id.desc()).first()
+
+        plan_config = db.query(models.PlanConfig).filter(
+            models.PlanConfig.plan == newest_plan.plan
+        ).first()
+
+        if client.exists(f"{user}::file"):
+            space_usage = int(client.get(f"{user}::file"))
+        else:
+            space_usage = 0
+
+        remaining_space = plan_config.file_limit - space_usage
+
+        data[platform] = {
+            "plan": newest_plan.plan,
+            "remaining_tokens": row.token_remaining,
+            "remaining_space": remaining_space,
+            "total_tokens": plan_config.token_limit,
+            "total_space": plan_config.file_limit,
+            "start_at": newest_plan.start_at,
+            "expire_at": newest_plan.expire_at
+        }
+
+    return data

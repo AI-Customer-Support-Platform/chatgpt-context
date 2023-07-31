@@ -1,4 +1,7 @@
 from enum import Enum
+import datetime
+from pydantic import BaseModel
+from typing import Optional
 
 class SubscriptionPlatform(str, Enum):
     web = "web"
@@ -10,3 +13,28 @@ class SubscriptionType(str, Enum):
     standard = "standard"
     plus = "plus"
     premium = "premium"
+
+
+class BaseSubscriptionInfo(BaseModel):
+    plan: SubscriptionType
+    remaining_tokens: int
+    total_tokens: int
+    remaining_space: int
+    total_space: int
+
+    start_at: datetime.datetime
+    expire_at: datetime.datetime
+
+class WebSubscription(BaseSubscriptionInfo):
+    pass
+
+class InstagramSubscription(BaseSubscriptionInfo):
+    pass
+
+class LineSubscription(BaseSubscriptionInfo):
+    pass
+
+class allSubscriptionInfo(BaseModel):
+    web: Optional[WebSubscription] = None
+    instagram: Optional[InstagramSubscription] = None
+    line: Optional[LineSubscription] = None

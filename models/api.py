@@ -5,7 +5,7 @@ from models.models import (
     QueryResult
 )
 from models.chat import QAHistory
-from models.payments import SubscriptionPlatform, SubscriptionType
+from models.payments import SubscriptionPlatform, SubscriptionType, allSubscriptionInfo
 from pydantic import BaseModel
 from typing import List, Optional, Any
 from server.db.schemas import Collection
@@ -81,3 +81,6 @@ class CreateStripeSubscriptionRequest(BaseModel):
 
 class RedirectUrlResponse(BaseModel):
     url: str
+
+class SubscriptionInfoReturn(allSubscriptionInfo):
+    pass
