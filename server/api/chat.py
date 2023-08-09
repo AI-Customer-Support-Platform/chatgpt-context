@@ -102,8 +102,12 @@ async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session 
 
     language = i18n("en")
 
-    stripe_id = crud.get_collection_stripe_id(db, cache.redis, collection)
-    
+    try:
+        stripe_id = crud.get_collection_stripe_id(db, cache.redis, collection)
+    except AttributeError:
+        await websocket.close(1002, "errors.PlansOrCollectionNotExists")
+        return
+
     logger.debug(f"stripe_id: {stripe_id}")
 
     while True:

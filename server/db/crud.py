@@ -147,8 +147,12 @@ def get_collection_stripe_id(db: Session, client: Redis, collection_id: UUID):
     else:
         owner = db.get(models.Collection, collection_id).owner
         user = db.query(models.User).filter(models.User.owner == owner).first().stripe_id
-        client.set(f"{collection_id}::stripe", user)
-
+        plan = db.query(models.Plan).filter(models.Plan.stripe_id == stripe_id).first()
+        if user is None and plan is None:
+            client.set(f"{collection_id}::stripe", user)
+        else:
+            raise AttributeError
+            
     return user
 
 def minus_token_remaining(db: Session, client: Redis, stripe_id: str, token_count: int):

@@ -46,7 +46,7 @@ query_schema = [
 ]
 
 
-async def chat_switch(question: str,  history: List[ChatHistory], collection: str, language: str,sorry: str):
+async def chat_switch(question: str,  history: List[ChatHistory], collection: str, language: str, sorry: str):
     messages = [
         {
             "role": "system", 
@@ -81,6 +81,8 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     )
 
     response_message = response["choices"][0]["message"]
+    token_usage = response["usage"]["total_tokens"]
+
     if response_message.get("function_call"):
         function_name = response_message["function_call"]["name"]
         function_args = json.loads(response_message["function_call"]["arguments"])
@@ -109,7 +111,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
             sorry=sorry
         )
     
-    return func
+    return func, token_usage
 
 
 def normal_answer(context: str, question: str, sorry: str) -> List[str]:
