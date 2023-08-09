@@ -14,12 +14,12 @@ from models.models import Document, DocumentMetadata
 
 async def get_document_from_file(
     file: UploadFile, metadata: DocumentMetadata
-) -> Document:
-    extracted_text = await extract_text_from_form_file(file)
+) -> (Document, int):
+    extracted_text, file_size = await extract_text_from_form_file(file)
 
     doc = Document(text=extracted_text, metadata=metadata)
 
-    return doc
+    return doc, file_size
 
 
 def extract_text_from_filepath(filepath: str, mimetype: Optional[str] = None) -> str:
@@ -98,6 +98,10 @@ async def extract_text_from_form_file(file: UploadFile):
 
     file_stream = await file.read()
 
+    file_size = len(file_stream)
+
+    logger.info("file_size: ", file_size)
+
     temp_file_path = "/tmp/temp_file"
 
     # write the file to a temporary location
@@ -114,4 +118,4 @@ async def extract_text_from_form_file(file: UploadFile):
     # remove file from temp location
     os.remove(temp_file_path)
 
-    return extracted_text
+    return extracted_text, file_size
