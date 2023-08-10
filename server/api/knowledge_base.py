@@ -75,8 +75,6 @@ async def upsert_file(
 
     document, file_space = await get_document_from_file(file, metadata_obj)
 
-    print(file_space)
-    
     sum_file_size = cache.redis.incr(f"{user}::file", file_space)
 
     file_limit = crud.get_file_limit(db, user)
