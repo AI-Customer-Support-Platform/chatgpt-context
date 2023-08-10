@@ -148,7 +148,7 @@ def get_collection_stripe_id(db: Session, client: Redis, collection_id: UUID):
         owner = db.get(models.Collection, collection_id).owner
         user = db.query(models.User).filter(models.User.owner == owner).first().stripe_id
         plan = db.query(models.Plan).filter(models.Plan.stripe_id == user).first()
-        if user is None and plan is None:
+        if user is not None and plan is not None:
             client.set(f"{collection_id}::stripe", user)
         else:
             raise AttributeError
