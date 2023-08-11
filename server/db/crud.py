@@ -113,6 +113,7 @@ def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str, s
     if db_plan is not None:
         db_plan.file_remaining = plan.file_limit
         db_plan.token_remaining = plan.token_limit
+        db_plan.plan = plan.plan
         db_plan.start_at = start_at
         db_plan.expire_at = end_at
     else:
