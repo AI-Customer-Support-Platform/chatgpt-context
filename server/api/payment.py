@@ -14,7 +14,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from datastore.providers.redis_chat import RedisChat
-from models.api import CreateStripeSubscriptionRequest, RedirectUrlResponse, SubscriptionInfoReturn
+from models.api import CreateStripeSubscriptionRequest, RedirectUrlResponse, SubscriptionInfoReturn, SubscriptionStorageReturn
 from server.db import crud, models, schemas
 from .deps import get_db, get_user_info, validate_token
 
@@ -94,14 +94,35 @@ async def create_checkout_session(
     response_model=SubscriptionInfoReturn,
 )
 async def get_subscription_info(
-    user_id: dict = Depends(validate_token),
+    user_id: str = Depends(validate_token),
     db: Session = Depends(get_db),
 ):
     stripe_id = crud.get_user_by_owner(db, user_id)
     try:
-        subscription_info = crud.get_subscription_info(db, cache.redis, stripe_id, user_id)
+        subscription_info = crud.get_subscription_info(db, stripe_id)
 
         return SubscriptionInfoReturn(**subscription_info)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
+@router.get(
+    "/user/storage",
+    response_model=SubscriptionStorageReturn
+)
+async def get_user_storage(
+    user_id: str = Depends(validate_token),
+    db: Session = Depends(get_db),
+):
+    try:
+        total_space = crud.get_file_limit(db, user_id)
+        sum_file_size = crud.get_total_file_size(db, user_id)
+
+        return SubscriptionStorageReturn(
+            total_space=total_space,
+            remaining_space=total_space - sum_file_size
+        )
+        
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")

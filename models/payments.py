@@ -19,8 +19,6 @@ class BaseSubscriptionInfo(BaseModel):
     plan: SubscriptionType
     remaining_tokens: int
     total_tokens: int
-    remaining_space: int
-    total_space: int
 
     start_at: datetime.datetime
     expire_at: datetime.datetime

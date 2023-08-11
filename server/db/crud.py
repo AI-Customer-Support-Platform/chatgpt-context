@@ -81,9 +81,11 @@ def delete_file(db: Session, file_id: UUID):
     db.delete(db_file)
     db.commit()
 
-def get_total_file_size(db: Session, collection_id: UUID):
+def get_total_file_size(db: Session, user: str):
     total_file_size = db.query(func.sum(models.DocumentFile.file_size)).\
-        filter(models.DocumentFile.collection_id == collection_id).scalar()
+        join(models.Collection).\
+        filter(models.Collection.owner == user).scalar()
+        
     return total_file_size
 
 def add_user(db: Session, owner: str, email: str):
@@ -197,8 +199,7 @@ def get_user_plan_price(db: Session, stripe_id: str, platform: str):
     return price_id
 
 
-def get_subscription_info(db: Session, client: Redis, stripe_id: str, user: str):
-    # Group by platform and sum all plan's remaining tokens
+def get_subscription_info(db: Session, stripe_id: str):
     user_plan = db.query(
             models.Plan.platform, 
             func.sum(models.Plan.token_remaining).label("token_remaining")
@@ -218,19 +219,10 @@ def get_subscription_info(db: Session, client: Redis, stripe_id: str, user: str)
             models.PlanConfig.plan == newest_plan.plan
         ).first()
 
-        if client.exists(f"{user}::file"):
-            space_usage = int(client.get(f"{user}::file"))
-        else:
-            space_usage = 0
-
-        remaining_space = plan_config.file_limit - space_usage
-
         data[platform] = {
             "plan": newest_plan.plan,
             "remaining_tokens": row.token_remaining,
-            "remaining_space": remaining_space,
             "total_tokens": plan_config.token_limit,
-            "total_space": plan_config.file_limit,
             "start_at": newest_plan.start_at,
             "expire_at": newest_plan.expire_at
         }

@@ -84,3 +84,7 @@ class RedirectUrlResponse(BaseModel):
 
 class SubscriptionInfoReturn(allSubscriptionInfo):
     pass
+
+class SubscriptionStorageReturn(BaseModel):
+    remaining_space: int
+    total_space: int

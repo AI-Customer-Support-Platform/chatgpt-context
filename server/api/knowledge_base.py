@@ -75,9 +75,7 @@ async def upsert_file(
 
     document, file_space = await get_document_from_file(file, metadata_obj)
 
-    sum_file_size = crud.get_total_file_size(db, collection)
-
-    logger.info("file_size: ", file_space)
+    sum_file_size = crud.get_total_file_size(db, user)
 
     file_limit = crud.get_file_limit(db, user)
 
