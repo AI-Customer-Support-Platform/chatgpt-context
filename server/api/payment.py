@@ -172,7 +172,7 @@ async def stripe_webhook(
 
         cache.redis.delete(f"{stripe_id}::reach_limit")
         
-        crud.add_plan(db, stripe_id, price_id, subscription_id)
+        crud.update_plan(db, price_id, subscription_id)
         
     if event["type"] == "customer.subscription.deleted":
         subscription_id = event_data["object"]["id"]

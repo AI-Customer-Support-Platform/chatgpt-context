@@ -130,6 +130,17 @@ def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str, s
     db.add(db_plan)
     db.commit()
 
+def update_plan(db: Session, price_id: str, subscription_id: str):
+    plan_config = get_plan_config(db, price_id)
+    subscription = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
+
+    subscription.plan = plan_config.plan
+
+    subscription.file_remaining = plan_config.file_limit
+    subscription.token_remaining = plan_config.token_limit
+
+    db.commit()
+
 def delete_plan(db: Session, subscription_id: str):
     db_plan = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
     db.delete(db_plan)
