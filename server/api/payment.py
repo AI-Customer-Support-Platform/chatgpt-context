@@ -164,7 +164,6 @@ async def stripe_webhook(
 
         crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
 
-
     if event["type"] == "customer.subscription.updated":
         stripe_id = event_data["object"]["customer"]
         price_id = event_data["object"]["plan"]["id"]
