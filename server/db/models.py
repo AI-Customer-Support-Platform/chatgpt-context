@@ -27,6 +27,8 @@ class DocumentFile(Base):
     id = Column(UUID, primary_key=True, index=True, default=uuid.uuid4)
 
     file_name = Column(String, nullable=False)
+    file_size = Column(Integer, default=0)
+    
     collection_id = Column(UUID, ForeignKey("collections.id"))
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 

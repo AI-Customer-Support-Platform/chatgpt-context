@@ -100,8 +100,6 @@ async def extract_text_from_form_file(file: UploadFile):
 
     file_size = len(file_stream)
 
-    logger.info("file_size: ", file_size)
-
     temp_file_path = "/tmp/temp_file"
 
     # write the file to a temporary location

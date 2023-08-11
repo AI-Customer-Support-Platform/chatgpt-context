@@ -5,6 +5,7 @@ import datetime
 
 class DocumentFileCreate(BaseModel):
     file_name: str
+    file_size: int
     collection_id: UUID
 
 class DocumentFile(DocumentFileCreate):

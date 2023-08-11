@@ -81,6 +81,11 @@ def delete_file(db: Session, file_id: UUID):
     db.delete(db_file)
     db.commit()
 
+def get_total_file_size(db: Session, collection_id: UUID):
+    total_file_size = db.query(func.sum(models.DocumentFile.file_size)).\
+        filter(models.DocumentFile.collection_id == collection_id).scalar()
+    return total_file_size
+
 def add_user(db: Session, owner: str, email: str):
     db_user = models.User(owner=owner, email=email)
     db.merge(db_user)
@@ -138,8 +143,9 @@ def get_price_id(db: Session, plan: SubscriptionType, platform: SubscriptionPlat
 
 def get_file_limit(db: Session, owner: str):
     user = db.query(models.User).filter(models.User.owner == owner).first().stripe_id
-    user_plan = db.query(models.Plan).filter(models.Plan.stripe_id == user).order_by(models.Plan.id.desc()).first()
-    return user_plan.file_remaining
+    file_limit = db.query(func.sum(models.Plan.file_remaining)).filter(models.Plan.stripe_id == user).scalar()
+
+    return file_limit
 
 def get_collection_stripe_id(db: Session, client: Redis, collection_id: UUID):
     if client.exists(f"{collection_id}::stripe"):
