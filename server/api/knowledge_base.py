@@ -79,7 +79,7 @@ async def upsert_file(
 
     file_limit = crud.get_file_limit(db, user)
 
-    if sum_file_size > file_limit:
+    if (sum_file_size + file_space) > file_limit:
         raise HTTPException(status_code=429, detail="File size limit exceeded")
     
     document_id = crud.create_file(db, schemas.DocumentFileCreate(file_name=file_name, collection_id=collection, file_size=file_space))
