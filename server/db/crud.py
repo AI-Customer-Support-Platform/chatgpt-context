@@ -111,8 +111,8 @@ def add_plan(db: Session, stripe_id: str, price_id: str, subscription_id: str, s
     plan = get_plan_config(db, price_id)
     db_plan = db.query(models.Plan).filter(models.Plan.subscription_id == subscription_id).first()
     if db_plan is not None:
-        if db_plan.file_remaining <= plan.file_limit:
-            db_plan.token_remaining = plan.token_limit
+        # if db_plan.file_remaining <= plan.file_limit:
+        db_plan.token_remaining = plan.token_limit
 
         db_plan.file_remaining = plan.file_limit
         db_plan.plan = plan.plan

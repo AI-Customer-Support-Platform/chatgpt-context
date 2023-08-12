@@ -163,32 +163,33 @@ async def stripe_webhook(
             end_at = datetime.fromtimestamp(paid_data[0]["period"]["end"])
 
             cache.redis.delete(f"{stripe_id}::reach_limit")
+            logger.debug(f"{stripe_id} price_id: {price_id}, start_at: {start_at}, end_at: {end_at}")
 
             crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
-        elif len(paid_data) == 2:
-            first_subscription_id = paid_data[0]["subscription"]
-            second_subscription_id = paid_data[1]["subscription"]
-            if first_subscription_id == second_subscription_id:
-                lock_period = datetime.fromtimestamp(paid_data[0]["period"]["end"] - 3600) - datetime.now()
-                cache.redis.set(f"{first_subscription_id}::update_lock", 1, ex=lock_period)
-                logger.debug(f"{second_subscription_id} lock period: {lock_period}")
+        # elif len(paid_data) == 2:
+        #     first_subscription_id = paid_data[0]["subscription"]
+        #     second_subscription_id = paid_data[1]["subscription"]
+        #     if first_subscription_id == second_subscription_id:
+        #         lock_period = datetime.fromtimestamp(paid_data[0]["period"]["end"] - 3600) - datetime.now()
+        #         cache.redis.set(f"{first_subscription_id}::update_lock", 1, ex=lock_period)
+        #         logger.debug(f"{second_subscription_id} lock period: {lock_period}")
 
-    if event["type"] == "customer.subscription.updated":
-        stripe_id = event_data["object"]["customer"]
-        price_id = event_data["object"]["plan"]["id"]
-        subscription_id = event_data["object"]["id"]
+    # if event["type"] == "customer.subscription.updated":
+    #     stripe_id = event_data["object"]["customer"]
+    #     price_id = event_data["object"]["plan"]["id"]
+    #     subscription_id = event_data["object"]["id"]
 
-        start_at = datetime.fromtimestamp(event_data["object"]["current_period_start"])
-        end_at = datetime.fromtimestamp(event_data["object"]["current_period_end"])
+    #     start_at = datetime.fromtimestamp(event_data["object"]["current_period_start"])
+    #     end_at = datetime.fromtimestamp(event_data["object"]["current_period_end"])
 
-        cache.redis.delete(f"{stripe_id}::reach_limit")
+    #     cache.redis.delete(f"{stripe_id}::reach_limit")
 
-        if not cache.redis.exists(f"{subscription_id}::update_lock"):
-            logger.info(f"stripe_id: {stripe_id}, price_id: {price_id}, subscription_id: {subscription_id}, start_at: {start_at}, end_at: {end_at}")
+    #     if not cache.redis.exists(f"{subscription_id}::update_lock"):
+    #         logger.info(f"stripe_id: {stripe_id}, price_id: {price_id}, subscription_id: {subscription_id}, start_at: {start_at}, end_at: {end_at}")
 
-            crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
-        else:
-            logger.debug(f"{subscription_id} in lock")
+    #         crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
+    #     else:
+    #         logger.debug(f"{subscription_id} in lock")
         
     if event["type"] == "customer.subscription.deleted":
         subscription_id = event_data["object"]["id"]
