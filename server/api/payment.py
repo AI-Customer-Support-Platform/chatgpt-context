@@ -128,7 +128,10 @@ async def get_user_storage(
         
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail="Internal Service Error")
+        return SubscriptionStorageReturn(
+            total_space=0,
+            remaining_space=0
+        )
 
 @router.post(
     "/stripe/webhook"
