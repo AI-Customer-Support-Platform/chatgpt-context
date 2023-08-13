@@ -97,7 +97,10 @@ async def get_subscription_info(
     user_id: str = Depends(validate_token),
     db: Session = Depends(get_db),
 ):
-    stripe_id = crud.get_user_by_owner(db, user_id)
+    try:
+        stripe_id = crud.get_user_by_owner(db, user_id)
+    except AttributeError:
+        return SubscriptionInfoReturn()
     try:
         subscription_info = crud.get_subscription_info(db, stripe_id)
 
