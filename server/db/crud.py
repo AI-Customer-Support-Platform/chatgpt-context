@@ -85,6 +85,9 @@ def get_total_file_size(db: Session, user: str):
     total_file_size = db.query(func.sum(models.DocumentFile.file_size)).\
         join(models.Collection).\
         filter(models.Collection.owner == user).scalar()
+    
+    if total_file_size is None:
+        total_file_size = 0
         
     return total_file_size
 
