@@ -120,8 +120,6 @@ async def get_user_storage(
     try:
         total_space = crud.get_file_limit(db, user_id)
         sum_file_size = crud.get_total_file_size(db, user_id)
-        if sum_file_size is None:
-            sum_file_size = 0
 
         return SubscriptionStorageReturn(
             total_space=total_space,
