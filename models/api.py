@@ -40,7 +40,7 @@ class DeleteResponse(BaseModel):
 
 class CreateCollectionRequest(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = ""
     fallback_msg: Optional[str] = "Token Limit Reached"
 
 
