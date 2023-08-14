@@ -57,10 +57,14 @@ def get_collection_by_id(db: Session, collection_id: UUID):
     db_collection = db.get(models.Collection, collection_id)
     return db_collection
 
+def get_fallback_msg(db: Session, collection_id: UUID):
+    db_collection = db.get(models.Collection, collection_id)
+    return db_collection.fallback_msg
+    
 def get_collection_list(db: Session):
     collection_list = db.scalars(db.query(models.Collection.id)).all()
     return collection_list
-    
+
 def create_file(db: Session, file: schemas.DocumentFileCreate) -> UUID:
     collection = db.get(models.Collection, file.collection_id)
 

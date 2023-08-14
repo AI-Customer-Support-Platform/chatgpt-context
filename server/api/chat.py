@@ -110,6 +110,8 @@ async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session 
 
     logger.debug(f"stripe_id: {stripe_id}")
 
+    fallback_msg = crud.get_fallback_msg(db, collection)
+
     while True:
         try:
             params = await websocket.receive_json()
@@ -178,7 +180,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session 
             if cache.redis.exists(f"{stripe_id}::reach_limit"):
                 await websocket.send_json(WebsocketMessage(
                     type=WebsocketFlag.answer_body, 
-                    content="limit reached"
+                    content=fallback_msg
                 ).dict())
 
                 await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
