@@ -222,7 +222,8 @@ def get_colletcion_file(
             created_at=collection.created_at,
             updated_at=collection.updated_at,
             description=collection.description,
-            documents=collection.documents
+            documents=collection.documents,
+            fallback_msg=collection.fallback_msg
         )
 
     except Exception as e:
@@ -248,7 +249,8 @@ def update_collection(
             name=request.name,
             description=request.description,
             created_at=collection.created_at,
-            updated_at=collection.updated_at
+            updated_at=collection.updated_at,
+            fallback_msg=collection.fallback_msg
         )
 
     except Exception as e:

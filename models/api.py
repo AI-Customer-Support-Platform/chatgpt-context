@@ -41,6 +41,7 @@ class DeleteResponse(BaseModel):
 class CreateCollectionRequest(BaseModel):
     name: str
     description: str | None = None
+    fallback_msg: Optional[str] = "Token Limit Reached"
 
 
 class CreateCollectionResponse(BaseModel):
@@ -54,6 +55,7 @@ class UserCollectionResponse(BaseModel):
     collections: Any
 
 class UpdateCollectionResponse(CreateCollectionResponse):
+    fallback_msg: str
     created_at: datetime.datetime
     updated_at: datetime.datetime 
 

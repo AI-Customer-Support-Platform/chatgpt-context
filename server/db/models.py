@@ -1,7 +1,7 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, Integer, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import UUID
 
@@ -17,6 +17,8 @@ class Collection(Base):
     description = Column(String)
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
+
+    fallback_msg = Column(Text, nullable=True, default="Token Limit Reached")
 
     documents = relationship("DocumentFile", back_populates="collection", cascade="all, delete-orphan")
 

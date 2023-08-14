@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 import datetime
 
@@ -16,6 +16,7 @@ class CollectionBase(BaseModel):
     owner: str
     name: str
     description: str | None = None
+    fallback_msg: Optional[str] = "Token Limit Reached"
 
 class CollectionCreate(CollectionBase):
     pass
@@ -24,6 +25,7 @@ class Collection(CollectionBase):
     id: UUID
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    fallback_msg: str
     documents: List[DocumentFile] = []
 
     class Config:
