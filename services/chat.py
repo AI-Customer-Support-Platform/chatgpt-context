@@ -13,12 +13,10 @@ import random
 import os
 
 from datastore.providers.qdrant_datastore import QdrantDataStore
-from datastore.providers.azure_nlp import AzureClient
 from datastore.providers.redis_chat import RedisChat
 from models.i18n import i18nAdapter
 
 datastore = QdrantDataStore()
-nlp_client = AzureClient()
 cache = RedisChat()
 i18n_adapter = i18nAdapter("languages/local.json")
 

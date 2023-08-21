@@ -1,0 +1,30 @@
+services:
+  retrieval-app:
+    image: wongssh/chatgpt-context:dev
+    ports:
+      - "80:80"
+    depends_on:
+      - qdrant
+      - redis
+    environment:
+      DATASTORE: "qdrant"
+      QDRANT_URL: "http://qdrant"
+      BEARER_TOKEN: "${BEARER_TOKEN}"
+      UPSTASH_REDIS_URL: "redis://redis:6379"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_API_BASE: "${OPENAI_API_BASE}"
+      OPENAI_API_TYPE: "${OPENAI_API_TYPE}"
+      OPENAI_EMBEDDINGMODEL_DEPLOYMENTID: "${OPENAI_EMBEDDINGMODEL_DEPLOYMENTID}"
+      OPENAI_COMPLETIONMODEL_DEPLOYMENTID: "${OPENAI_COMPLETIONMODEL_DEPLOYMENTID}"
+      OPENAI_EMBEDDING_BATCH_SIZE: 1
+      OPENAI_API_VERSION: "2023-07-01-preview"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    
+  redis:
+    image: redis/redis-stack-server:latest
+    volumes:
+      - ./redis_data:/data
