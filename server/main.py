@@ -31,7 +31,6 @@ from services.chat import chat_switch
 from models.models import Query
 from models.i18n import i18n, i18nAdapter
 from models.chat import AuthMetadata, WebsocketMessage, WebsocketFlag
-from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 
 bearer_scheme = HTTPBearer()
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
@@ -46,6 +45,7 @@ def validate_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_sc
 
 app = FastAPI(dependencies=[Depends(validate_token)])
 app.mount("/.well-known", StaticFiles(directory=".well-known"), name="static")
+app.mount("/static", StaticFiles(directory="front"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -130,7 +130,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
     user_uuid = uuid.UUID(user_id).bytes
     await websocket.send_json(WebsocketMessage(type="authorized").dict())
 
-    language = i18n("en")
+    language = i18n("ja")
 
     while True:
         try:
@@ -163,63 +163,52 @@ async def websocket_endpoint(collection: str, websocket: WebSocket):
 
                 continue
 
-            case "chat_v2":
-                recaptcha = v2_captcha_verify(user_uuid, message.content.v2_token)
-            
-            case "chat_v3":
-                recaptcha = v3_captcha_verify(user_uuid, message.content.v3_token)
+            case "chat":
+                user_question = message.content.question
+                cache_flag = message.content.cache
+                print(f"{user_id} asked: {user_question}")
 
+                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
 
-        if recaptcha:
-            user_question = message.content.question
-            cache_flag = message.content.cache
-            print(f"{user_id} asked: {user_question}")
+                if cache_flag:
+                    cache_answer = cache.get_faq_answer(user_question, language)
+                    if cache_answer:
+                        await websocket.send_json(WebsocketMessage(
+                            type=WebsocketFlag.answer_body, 
+                            content=cache_answer
+                        ).dict())
 
-            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_start).dict())
+                        cache.set_chat_history(user_uuid, {
+                            "user_question": user_question,
+                            "answer": cache_answer
+                        })
 
-            if cache_flag:
-                cache_answer = cache.get_faq_answer(user_question, language)
-                if cache_answer:
+                        await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
+
+                        continue
+                
+                chat_response = await chat_switch(
+                    question=user_question,  
+                    history=cache.get_chat_history(user_uuid), 
+                    collection=collection, 
+                    language=language,
+                    sorry=sorry
+                )
+                content = ""
+                async for data in chat_response:
+                    content += data
+
                     await websocket.send_json(WebsocketMessage(
                         type=WebsocketFlag.answer_body, 
-                        content=cache_answer
+                        content=data
                     ).dict())
+                
+                cache.set_chat_history(user_uuid, {
+                    "user_question": user_question,
+                    "answer": content
+                })
 
-                    cache.set_chat_history(user_uuid, {
-                        "user_question": user_question,
-                        "answer": cache_answer
-                    })
-
-                    await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
-
-                    continue
-            
-            chat_response = await chat_switch(
-                question=user_question,  
-                history=cache.get_chat_history(user_uuid), 
-                collection=collection, 
-                language=language,
-                sorry=sorry
-            )
-            content = ""
-            async for data in chat_response:
-                content += data
-
-                await websocket.send_json(WebsocketMessage(
-                    type=WebsocketFlag.answer_body, 
-                    content=data
-                ).dict())
-            
-            cache.set_chat_history(user_uuid, {
-                "user_question": user_question,
-                "answer": content
-            })
-
-            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
-
-        else:
-            await websocket.send_json(WebsocketMessage(type=WebsocketFlag.v2_req).dict())
-            continue
+                await websocket.send_json(WebsocketMessage(type=WebsocketFlag.answer_end).dict())
 
 @app.on_event("startup")
 async def startup():

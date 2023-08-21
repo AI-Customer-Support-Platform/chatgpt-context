@@ -10,6 +10,7 @@ import openai
 import json
 import re
 import random
+import os
 
 from datastore.providers.qdrant_datastore import QdrantDataStore
 from datastore.providers.azure_nlp import AzureClient
@@ -21,6 +22,7 @@ nlp_client = AzureClient()
 cache = RedisChat()
 i18n_adapter = i18nAdapter("languages/local.json")
 
+chat_engine = os.environ.get("OPENAI_COMPLETIONMODEL_DEPLOYMENTID")
 query_schema = [
     {
         "name": "ask_database",
@@ -73,7 +75,8 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     })
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
+        model="gpt-35-turbo-0613",
+        engine=chat_engine,
         messages=messages,
         functions=query_schema,
         temperature=0
@@ -163,8 +166,8 @@ async def ask_database(user_question: str, query: str, collection: str, language
     for doc in query_results[0].results:
         context_str += f"{doc.text}\n\"\"\"\n"
     
-    sentiment = nlp_client.sentiment_analysis(user_question)
-    print(f"Sentiment: {sentiment}")
+    sentiment = "netural"
+    # print(f"Sentiment: {sentiment}")
     # sentiment = classify_question(user_question).sentiment
     if sentiment == "negative":
         messages = negative_answer(context_str, user_question, sorry)
@@ -172,19 +175,22 @@ async def ask_database(user_question: str, query: str, collection: str, language
         messages = normal_answer(context_str, user_question, sorry)
 
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
+        engine=chat_engine, messages=messages, stream=True, temperature=0
     )
     # print(messages)
     final_result = ""
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
+
+        if not chunk.choices:
+            continue
+        
         if resp.choices[0].delta is not None:
             content = resp.choices[0].delta.get("content", "")
             final_result += content
             # Sorry 申
             if final_result.startswith(i18n_adapter.get_message(language, message="sorry")):
                 print(f"{user_question} Can't Answer")
-                cache.add_not_answer_key_world(query, language)
 
         elif chunk.choices[0].finish_reason == "stop":
             continue
@@ -220,13 +226,18 @@ async def get_balance(user_question: str):
     
     stream_answer = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
+        engine=chat_engine,
         messages=messages,
-        stream=True, 
+        stream=True,
         temperature=0
     )
 
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
+
+        if not chunk.choices:
+            continue
+
         if resp.choices[0].delta is not None:
             content = resp.choices[0].delta.get("content", "")
         elif chunk.choices[0].finish_reason == "stop":
