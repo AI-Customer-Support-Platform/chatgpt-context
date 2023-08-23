@@ -2,7 +2,7 @@ services:
   retrieval-app:
     image: wongssh/chatgpt-context:dev
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
       - qdrant
       - redis
