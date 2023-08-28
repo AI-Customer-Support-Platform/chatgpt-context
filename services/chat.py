@@ -49,7 +49,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     messages = [
         {
             "role": "system", 
-            "content": "Before replying to user questions, please query the database." 
+            "content": "Before replying to user questions, please search the knowledge base" 
         }
     ]
 
@@ -62,7 +62,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
                 },
                 {
                     "role": "assistant",
-                    "content": history[-1]["answer"]
+                    "content": history[-1]["answer"][:100]
                 },
             ]
         )
@@ -77,6 +77,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
         engine=chat_engine,
         messages=messages,
         functions=query_schema,
+        function_call={"name": "ask_database"},
         temperature=0
     )
 
