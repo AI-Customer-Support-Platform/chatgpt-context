@@ -49,7 +49,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     messages = [
         {
             "role": "system", 
-            "content": "Before replying to user questions, please search the knowledge base" 
+            "content": "You are customer service for the accounting system. Before replying to user questions, please search the knowledge base" 
         }
     ]
 
@@ -120,7 +120,7 @@ def normal_answer(context: str, question: str, sorry: str) -> List[str]:
         {
             "role": "system",
             "content": f"""
-            Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
+            You are customer service for the accounting system. Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
 
             {context}\nUser_Question: {question}
             Answer (using markdown):\n
