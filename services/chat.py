@@ -154,7 +154,7 @@ def negative_answer(context: str, user_question: str, sorry: str) -> List[str]:
 
 async def ask_database(user_question: str, query: str, collection: str, language: str, sorry: str) -> str:
     query_results = await datastore.query(
-        [Query(query=query, top_k=3)],
+        [Query(query=query, top_k=2)],
         collection
     )
 
