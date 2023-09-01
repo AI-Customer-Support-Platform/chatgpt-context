@@ -19,6 +19,7 @@ class Collection(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     fallback_msg = Column(Text, nullable=True, default="Token Limit Reached")
+    line_channel_access_token = Column(Text, nullable=True)
 
     documents = relationship("DocumentFile", back_populates="collection", cascade="all, delete-orphan")
 

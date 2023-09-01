@@ -42,6 +42,7 @@ class CreateCollectionRequest(BaseModel):
     name: str
     description: Optional[str] = ""
     fallback_msg: Optional[str] = "Token Limit Reached"
+    line_channel_access_token: Optional[str] = ""
 
 
 class CreateCollectionResponse(BaseModel):
@@ -56,6 +57,7 @@ class UserCollectionResponse(BaseModel):
 
 class UpdateCollectionResponse(CreateCollectionResponse):
     fallback_msg: str
+    line_channel_access_token: Optional[str] = ""
     created_at: datetime.datetime
     updated_at: datetime.datetime 
 
