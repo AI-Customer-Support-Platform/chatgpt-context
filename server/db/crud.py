@@ -38,6 +38,8 @@ def update_collection(db: Session, collection_id: UUID, collection: schemas.Coll
     db_collection.name = collection.name
     db_collection.description = collection.description
     db_collection.fallback_msg = collection.fallback_msg
+    db_collection.line_channel_access_token = collection.line_channel_access_token
+    db_collection.line_language = collection.line_language
     db_collection.updated_at = datetime.datetime.utcnow()
 
     db.commit()

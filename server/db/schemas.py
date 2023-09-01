@@ -17,6 +17,7 @@ class CollectionBase(BaseModel):
     name: str
     description: str | None = None
     line_channel_access_token: Optional[str] = ""
+    line_language: Optional[str] = "ja"
     fallback_msg: Optional[str] = "Token Limit Reached"
 
 class CollectionCreate(CollectionBase):
@@ -28,6 +29,8 @@ class Collection(CollectionBase):
     updated_at: datetime.datetime
     fallback_msg: str
     line_channel_access_token: Optional[str] = ""
+    line_language: Optional[str] = "ja"
+    
     documents: List[DocumentFile] = []
 
     class Config:

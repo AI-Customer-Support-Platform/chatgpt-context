@@ -20,6 +20,7 @@ class Collection(Base):
 
     fallback_msg = Column(Text, nullable=True, default="Token Limit Reached")
     line_channel_access_token = Column(Text, nullable=True)
+    line_language = Column(String, nullable=True, default="ja")
 
     documents = relationship("DocumentFile", back_populates="collection", cascade="all, delete-orphan")
 

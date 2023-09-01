@@ -251,6 +251,7 @@ def update_collection(
             created_at=collection.created_at,
             updated_at=collection.updated_at,
             line_channel_access_token=request.line_channel_access_token,
+            line_language=request.line_language,
             fallback_msg=collection.fallback_msg
         )
 
