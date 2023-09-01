@@ -84,7 +84,7 @@ async def create_checkout_session(
     stripe_id = crud.get_user_by_owner(db, user_id)
     session = stripe.billing_portal.Session.create(
         customer=stripe_id,
-        return_url="https://chatbot-manager.vercel.app/"
+        return_url="https://dashboard.gptb.ai/"
     )
 
     return RedirectUrlResponse(url=session.url)
