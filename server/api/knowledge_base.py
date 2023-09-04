@@ -223,7 +223,9 @@ def get_colletcion_file(
             updated_at=collection.updated_at,
             description=collection.description,
             documents=collection.documents,
-            fallback_msg=collection.fallback_msg
+            fallback_msg=collection.fallback_msg,
+            line_channel_access_token=collection.line_channel_access_token,
+            line_language=collection.line_language
         )
 
     except Exception as e:
