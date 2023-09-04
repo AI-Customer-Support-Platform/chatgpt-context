@@ -62,6 +62,11 @@ def get_collection_by_id(db: Session, collection_id: UUID):
 def get_fallback_msg(db: Session, collection_id: UUID):
     db_collection = db.get(models.Collection, collection_id)
     return db_collection.fallback_msg
+
+def get_line_config(db: Session, collection_id: UUID) -> (str, str):
+    db_collection = db.get(models.Collection, collection_id)
+
+    return (db_collection.line_channel_access_token, db_collection.line_language)
     
 def get_collection_list(db: Session):
     collection_list = db.scalars(db.query(models.Collection.id)).all()

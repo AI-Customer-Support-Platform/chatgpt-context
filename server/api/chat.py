@@ -1,9 +1,11 @@
 import os
 import uuid
+import json
 from fastapi import (
     WebSocket, 
     WebSocketDisconnect, 
     HTTPException, 
+    Request,
     Depends, 
     Body,
     Response,
@@ -24,6 +26,7 @@ from models.i18n import i18n, i18nAdapter
 from models.chat import AuthMetadata, WebsocketMessage, WebsocketFlag
 from services.recaptcha import v2_captcha_verify, v3_captcha_verify
 from services.chunks import token_count
+from services.line_bot import line_reply
 
 from datastore.providers.redis_chat import RedisChat
 from server.api.deps import get_db
@@ -80,6 +83,45 @@ async def chat(
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error") 
 
+@router.post("/line-webhook/{collection}")
+async def line_webhook(
+    request: Request,
+    collection: uuid.UUID, 
+    db: Session = Depends(get_db)
+):
+    body = await request.json()
+
+    line_token, line_language = crud.get_line_config(db, collection)
+    language = i18n(line_language)
+    sorry = i18n_adapter.get_message(language, message="sorry")
+    stripe_id = crud.get_collection_stripe_id(db, cache.redis, collection)
+    try:
+        for event in body["events"]:
+            if event["type"] != "message":
+                return
+            if event["message"]["type"] != "text":
+                return
+            else:
+                user_id = event["source"]["userId"]
+                history = cache.get_chat_history(user_id)
+
+                test_answer, token_usage = await line_reply(
+                    reply_token=event["replyToken"],
+                    question=event["message"]["text"],
+                    history=history,
+                    user_id=user_id,
+                    collection=str(collection),
+                    language=language,
+                    sorry=sorry,
+                    cache=cache
+                )
+
+                token_usage += token_count(test_answer) + 300
+
+                crud.minus_token_remaining(db, cache.redis, stripe_id, token_usage)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
 
 @router.websocket("/ws/{collection}")
 async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session = Depends(get_db)):
@@ -192,8 +234,10 @@ async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session 
                 history=cache.get_chat_history(user_uuid), 
                 collection=collection, 
                 language=language,
-                sorry=sorry
+                sorry=sorry,
+                stream=True
             )
+
             content = ""
             async for data in chat_response:
                 content += data
@@ -208,7 +252,7 @@ async def websocket_endpoint(collection: str, websocket: WebSocket, db: Session 
                 "answer": content
             })
 
-            token_usage += token_count(content)
+            token_usage += token_count(content) + 300
             logger.debug(f"token_usage: {token_usage}")
             crud.minus_token_remaining(db, cache.redis, stripe_id, token_usage)
 

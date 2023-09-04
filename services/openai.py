@@ -91,5 +91,5 @@ def get_completion(
 
     choices = response["choices"]  # type: ignore
     completion = choices[0].text.strip()
-    print(f"Completion: {completion}")
+    # print(f"Completion: {completion}")
     return completion

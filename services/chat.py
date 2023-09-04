@@ -46,7 +46,7 @@ query_schema = [
 ]
 
 
-async def chat_switch(question: str,  history: List[ChatHistory], collection: str, language: str, sorry: str):
+async def chat_switch(question: str,  history: List[ChatHistory], collection: str, language: str, sorry: str, stream: bool):
     messages = [
         {
             "role": "system", 
@@ -94,7 +94,8 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
                     query=function_args.get("key_word"),
                     collection=collection,
                     language=language,
-                    sorry=sorry
+                    sorry=sorry,
+                    stream=stream
                 )
 
             case "get_balance":
@@ -108,11 +109,77 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
             query=question,
             collection=collection,
             language=language,
-            sorry=sorry
+            sorry=sorry,
+            stream=stream
         )
     
     return func, token_usage
 
+
+async def chat_line(question: str,  history: List[ChatHistory], collection: str, language: str, sorry: str) -> str:
+    messages = [
+        {
+            "role": "system", 
+            "content": "Before replying to user questions, please query the database." 
+        }
+    ]
+
+    if len(history) > 0:
+        messages.extend(
+            [
+                {
+                    "role": "user",
+                    "content": history[-1]["user_question"]
+                },
+                {
+                    "role": "assistant",
+                    "content": history[-1]["answer"]
+                },
+            ]
+        )
+
+    messages.append({
+        "role": "user",
+        "content": question
+    })
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=messages,
+        functions=query_schema,
+        temperature=0
+    )
+
+    response_message = response["choices"][0]["message"]
+    token_usage = response["usage"]["total_tokens"]
+
+    if response_message.get("function_call"):
+        function_name = response_message["function_call"]["name"]
+        function_args = json.loads(response_message["function_call"]["arguments"])
+        logger.info(f"Function name: {function_name} Args: {function_args}")
+        match function_name:
+            case "ask_database":
+                line_reply = await chat_reply(
+                    user_question=question,
+                    query=function_args.get("key_word"),
+                    collection=collection,
+                    language=language,
+                    sorry=sorry
+                )
+
+            case "get_balance":
+                line_reply = "$1000"
+    else:
+        logger.warning(f"{question} Fallback")
+        line_reply = await chat_reply(
+            user_question=question,
+            query=question,
+            collection=collection,
+            language=language,
+            sorry=sorry
+        )
+
+    return line_reply, token_usage
 
 def normal_answer(context: str, question: str, sorry: str) -> List[str]:
     # print(f"Context: {context}")
@@ -153,7 +220,14 @@ def negative_answer(context: str, user_question: str, sorry: str) -> List[str]:
     return messages
 
 
-async def ask_database(user_question: str, query: str, collection: str, language: str, sorry: str) -> str:
+async def ask_database(
+    user_question: str, 
+    query: str, 
+    collection: str, 
+    language: str, 
+    sorry: str, 
+    stream: bool
+) -> str:
     query_results = await datastore.query(
         [Query(query=query, top_k=3)],
         collection
@@ -173,25 +247,52 @@ async def ask_database(user_question: str, query: str, collection: str, language
     else:
         messages = normal_answer(context_str, user_question, sorry)
 
-    stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
+    if stream:
+        stream_answer = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
+        )
+        # print(messages)
+        final_result = ""
+        for chunk in stream_answer:
+            resp = OpenAIChatResponse(**chunk)
+            if resp.choices[0].delta is not None:
+                content = resp.choices[0].delta.get("content", "")
+                final_result += content
+                # Sorry 申
+                if final_result.startswith(i18n_adapter.get_message(language, message="sorry")):
+                    print(f"{user_question} Can't Answer")
+                    cache.add_not_answer_key_world(query, language, collection)
+
+            elif chunk.choices[0].finish_reason == "stop":
+                continue
+
+            yield content
+    else:
+        answer = get_chat_completion(messages=messages)
+
+        yield answer
+
+async def chat_reply(
+    user_question: str, 
+    query: str, 
+    collection: str, 
+    language: str, 
+    sorry: str, 
+) -> str:
+    query_results = await datastore.query(
+        [Query(query=query, top_k=3)],
+        collection
     )
-    # print(messages)
-    final_result = ""
-    for chunk in stream_answer:
-        resp = OpenAIChatResponse(**chunk)
-        if resp.choices[0].delta is not None:
-            content = resp.choices[0].delta.get("content", "")
-            final_result += content
-            # Sorry 申
-            if final_result.startswith(i18n_adapter.get_message(language, message="sorry")):
-                print(f"{user_question} Can't Answer")
-                cache.add_not_answer_key_world(query, language, collection)
 
-        elif chunk.choices[0].finish_reason == "stop":
-            continue
+    cache.add_question_key_word(query, language, collection)
+    context_str = ""
 
-        yield content
+    for doc in query_results[0].results:
+        context_str += f"{doc.text}\n\"\"\"\n"
+    messages = normal_answer(context_str, user_question, sorry)
+    answer = get_chat_completion(messages=messages)
+
+    return answer
 
 
 def chat_response(context: List[DocumentChunkWithScore], user_question: str, sorry: str) -> str:
