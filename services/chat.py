@@ -73,7 +73,7 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     })
 
     response = openai.ChatCompletion.create(
-        model="gpt-35-turbo-0613",
+        # model="gpt-4-0613",
         engine=chat_engine,
         messages=messages,
         functions=query_schema,
@@ -224,7 +224,7 @@ async def get_balance(user_question: str):
     ]
     
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
+        # model="gpt-4-0613",
         engine=chat_engine,
         messages=messages,
         stream=True,
