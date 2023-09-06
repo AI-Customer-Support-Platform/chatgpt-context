@@ -10,6 +10,7 @@ import openai
 import json
 import re
 import random
+import os
 
 from datastore.providers.qdrant_datastore import QdrantDataStore
 from datastore.providers.azure_nlp import AzureClient
@@ -21,6 +22,8 @@ datastore = QdrantDataStore()
 nlp_client = AzureClient()
 cache = RedisChat()
 i18n_adapter = i18nAdapter("languages/local.json")
+
+chat_engine = os.environ.get("OPENAI_COMPLETIONMODEL_DEPLOYMENTID")
 
 query_schema = [
     {
@@ -74,10 +77,10 @@ async def chat_switch(question: str,  history: List[ChatHistory], collection: st
     })
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
         messages=messages,
         functions=query_schema,
-        temperature=0
+        temperature=0,
+        engine=chat_engine,
     )
 
     response_message = response["choices"][0]["message"]
@@ -144,10 +147,10 @@ async def chat_line(question: str,  history: List[ChatHistory], collection: str,
     })
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
         messages=messages,
         functions=query_schema,
-        temperature=0
+        temperature=0,
+        engine=chat_engine,
     )
 
     response_message = response["choices"][0]["message"]
@@ -249,12 +252,15 @@ async def ask_database(
 
     if stream:
         stream_answer = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo", messages=messages, stream=True, temperature=0
+            messages=messages, stream=True, temperature=0, engine=chat_engine,
         )
         # print(messages)
         final_result = ""
         for chunk in stream_answer:
             resp = OpenAIChatResponse(**chunk)
+            if not resp.choices:
+                continue
+            
             if resp.choices[0].delta is not None:
                 content = resp.choices[0].delta.get("content", "")
                 final_result += content
@@ -322,14 +328,18 @@ async def get_balance(user_question: str):
     ]
     
     stream_answer = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
         messages=messages,
         stream=True, 
-        temperature=0
+        temperature=0,
+        engine=chat_engine,
     )
 
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
+        
+        if not resp.choices:
+            continue
+
         if resp.choices[0].delta is not None:
             content = resp.choices[0].delta.get("content", "")
         elif chunk.choices[0].finish_reason == "stop":

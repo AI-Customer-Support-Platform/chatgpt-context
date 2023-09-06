@@ -58,6 +58,8 @@ def get_chat_completion(
     """
     # call the OpenAI chat completion API with the given messages
     # Note: Azure Open AI requires deployment id
+    deployment_id = os.environ.get("OPENAI_COMPLETIONMODEL_DEPLOYMENTID")
+
     response = {}
     if deployment_id == None:
         response = openai.ChatCompletion.create(
