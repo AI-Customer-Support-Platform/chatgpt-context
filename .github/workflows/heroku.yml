@@ -1,8 +1,9 @@
 name: Deploy to heroku.
 
-# on:
-#   push:
-#     branches:
+on:
+  push:
+    branches:
+      - test
 #       - main
 #       - dev
 
