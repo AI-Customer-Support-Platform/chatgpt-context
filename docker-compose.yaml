@@ -1,0 +1,49 @@
+services:
+  retrieval-app:
+    image: wongssh/chatgpt-context:backend
+    ports:
+      - "8080"
+    depends_on:
+      - qdrant
+      - redis
+      - db
+    environment:
+      DATASTORE: "qdrant"
+      QDRANT_URL: "http://qdrant"
+      BEARER_TOKEN: "${BEARER_TOKEN}"
+      UPSTASH_REDIS_URL: "redis://redis:6379"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      OPENAI_API_BASE: "${OPENAI_API_BASE}"
+      OPENAI_API_TYPE: "${OPENAI_API_TYPE}"
+      OPENAI_EMBEDDINGMODEL_DEPLOYMENTID: "${OPENAI_EMBEDDINGMODEL_DEPLOYMENTID}"
+      OPENAI_COMPLETIONMODEL_DEPLOYMENTID: "${OPENAI_COMPLETIONMODEL_DEPLOYMENTID}"
+      OPENAI_EMBEDDING_BATCH_SIZE: 1
+      OPENAI_API_VERSION: "2023-07-01-preview"
+      AUTH0_DOMAIN: "${AUTH0_DOMAIN}"
+      AUTH_CLIENT_ID: "${AUTH_CLIENT_ID}"
+      SQLALCHEMY_DATABASE_URL: "postgresql://postgres:ry6xANqgAakb4S6@db:5432/gptb"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET}"
+      LANGUAGE_KEY: "${LANGUAGE_KEY}"
+      LANGUAGE_ENDPOINT: "${LANGUAGE_ENDPOINT}"
+      
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    
+  redis:
+    image: redis/redis-stack-server:latest
+    volumes:
+      - ./redis_data:/data
+    
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    environment:
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+      POSTGRES_PASSWORD: "ry6xANqgAakb4S6"
+      POSTGRES_USER: "postgres"
+      POSTGRES_DB: "gptb"
