@@ -7,6 +7,8 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PayloadSchemaType
 from utils.common import singleton_with_lock
 
+# from loguru import logger
+
 from datastore.datastore import DataStore
 from models.models import (
     DocumentChunk,
@@ -101,6 +103,9 @@ class QdrantDataStore(DataStore):
             collection_name=collection,
             requests=search_requests,
         )
+
+        # logger.debug(results)
+
         return [
             QueryResult(
                 query=query.query,
@@ -189,13 +194,18 @@ class QdrantDataStore(DataStore):
 
         # Filtering by document ids
         if ids and len(ids) > 0:
-            for document_id in ids:
-                should_conditions.append(
-                    rest.FieldCondition(
-                        key="metadata.document_id",
-                        match=rest.MatchValue(value=document_id),
-                    )
+            must_conditions.append(
+                rest.HasIdCondition(
+                    has_id=ids,
                 )
+            )
+            # for document_id in ids:
+            #     must_conditions.append(
+            #         rest.FieldCondition(
+            #             key="id",
+            #             match=rest.MatchValue(value=document_id),
+            #         )
+            #     )
 
         # Equality filters for the payload attributes
         if metadata_filter:
@@ -240,6 +250,7 @@ class QdrantDataStore(DataStore):
         if 0 == len(must_conditions) and 0 == len(should_conditions):
             return None
 
+        # logger.debug(rest.Filter(must=must_conditions, should=should_conditions))
         return rest.Filter(must=must_conditions, should=should_conditions)
 
     def _convert_scored_point_to_document_chunk_with_score(
@@ -247,7 +258,8 @@ class QdrantDataStore(DataStore):
     ) -> DocumentChunkWithScore:
         payload = scored_point.payload or {}
         return DocumentChunkWithScore(
-            id=payload.get("id"),
+            # id=payload.get("id"),
+            id=scored_point.id,
             text=scored_point.payload.get("text"),  # type: ignore
             metadata=scored_point.payload.get("metadata"),  # type: ignore
             embedding=scored_point.vector,  # type: ignore
