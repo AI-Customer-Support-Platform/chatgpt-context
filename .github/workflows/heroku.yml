@@ -3,7 +3,8 @@ name: Deploy to heroku.
 on:
   push:
     branches:
-      - main
+      # - test
+#       - main
       - dev
 
 # Your workflows jobs.
