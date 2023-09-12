@@ -7,7 +7,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PayloadSchemaType
 from utils.common import singleton_with_lock
 
-from loguru import logger
+# from loguru import logger
 
 from datastore.datastore import DataStore
 from models.models import (
