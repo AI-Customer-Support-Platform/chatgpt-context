@@ -7,7 +7,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import PayloadSchemaType
 from utils.common import singleton_with_lock
 
-# from loguru import logger
+from loguru import logger
 
 from datastore.datastore import DataStore
 from models.models import (
@@ -73,11 +73,16 @@ class QdrantDataStore(DataStore):
         """
         collection = collection_name if collection_name is not None else self.collection_name
 
+        # logger.debug(chunks)
+
         points = [
             self._convert_document_chunk_to_point(chunk)
             for _, chunks in chunks.items()
             for chunk in chunks
         ]
+
+        # logger.debug(f"Points: {points}")
+
         self.client.upsert(
             collection_name=collection,
             points=points,  # type: ignore
@@ -155,8 +160,9 @@ class QdrantDataStore(DataStore):
             if document_chunk.metadata.created_at is not None
             else None
         )
+        # logger.debug(f"Chunck:{document_chunk}")
         return rest.PointStruct(
-            id=self._create_document_chunk_id(document_chunk.id),
+            id=document_chunk.id,
             vector=document_chunk.embedding,  # type: ignore
             payload={
                 "id": document_chunk.id,

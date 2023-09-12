@@ -134,12 +134,21 @@ def create_document_chunks(
 
     # Assign each chunk a sequential number and create a DocumentChunk object
     for i, text_chunk in enumerate(text_chunks):
-        chunk_id = f"{doc_id}_{i}"
-        doc_chunk = DocumentChunk(
-            id=chunk_id,
-            text=text_chunk,
-            metadata=metadata,
-        )
+        # chunk_id = f"{doc_id}_{i}"
+        chunk_id = str(uuid.uuid4())
+        if not doc_id:
+            doc_chunk = DocumentChunk(
+                id=chunk_id,
+                text=text_chunk,
+                metadata=metadata,
+            )
+        else:
+            doc_chunk = DocumentChunk(
+                id=doc_id,
+                text=text_chunk,
+                metadata=metadata,
+                document_id=doc_id,
+            )
         # Append the chunk object to the list of chunks for this document
         doc_chunks.append(doc_chunk)
 

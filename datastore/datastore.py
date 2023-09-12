@@ -13,7 +13,6 @@ from models.models import (
 from services.chunks import get_document_chunks
 from services.openai import get_embeddings
 
-
 class DataStore(ABC):
     async def upsert(
         self, documents: List[Document], chunk_token_size: Optional[int] = None, collection_name: Optional[str] = None
@@ -24,18 +23,18 @@ class DataStore(ABC):
         Return a list of document ids.
         """
         # Delete any existing vectors for documents with the input document ids
-        await asyncio.gather(
-            *[
-                self.delete(
-                    filter=DocumentMetadataFilter(
-                        document_id=document.id,
-                    ),
-                    delete_all=False,
-                )
-                for document in documents
-                if document.id
-            ]
-        )
+        # await asyncio.gather(
+        #     *[
+        #         self.delete(
+        #             filter=DocumentMetadataFilter(
+        #                 document_id=document.id,
+        #             ),
+        #             delete_all=False,
+        #         )
+        #         for document in documents
+        #         if document.id
+        #     ]
+        # )
         print(f"In datastore.py {collection_name}")
         chunks = get_document_chunks(documents, chunk_token_size)
 
