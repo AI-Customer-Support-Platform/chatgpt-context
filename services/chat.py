@@ -120,7 +120,7 @@ def normal_answer(context: str, question: str, sorry: str) -> List[str]:
         {
             "role": "system",
             "content": f"""
-            You are customer service for the accounting system. Use the provided articles delimited by triple quotes to answer "User_Question". If the answer cannot be found in the articles, write "{sorry}"
+            You are customer service for the accounting system. Use the provided articles delimited by triple quotes to answer "User_Question". If you can't reply based on context, please write "{sorry}"
 
             {context}\nUser_Question: {question}
             Answer (using markdown):\n
@@ -172,6 +172,8 @@ async def ask_database(user_question: str, query: str, collection: str, language
         messages = negative_answer(context_str, user_question, sorry)
     else:
         messages = normal_answer(context_str, user_question, sorry)
+
+    print(messages)
 
     stream_answer = openai.ChatCompletion.create(
         engine=chat_engine, messages=messages, stream=True, temperature=0
