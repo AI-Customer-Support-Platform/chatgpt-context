@@ -155,7 +155,7 @@ def negative_answer(context: str, user_question: str, sorry: str) -> List[str]:
 
 async def ask_database(user_question: str, query: str, collection: str, language: str, sorry: str) -> str:
     query_results = await datastore.query(
-        [Query(query=query, top_k=2)],
+        [Query(query=query, top_k=3)],
         collection
     )
 
@@ -178,7 +178,7 @@ async def ask_database(user_question: str, query: str, collection: str, language
     stream_answer = openai.ChatCompletion.create(
         engine=chat_engine, messages=messages, stream=True, temperature=0
     )
-    # print(messages)
+    
     final_result = ""
     for chunk in stream_answer:
         resp = OpenAIChatResponse(**chunk)
