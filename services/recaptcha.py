@@ -6,7 +6,7 @@ cache = RedisChat()
 
 def v2_captcha_verify(user_id: bytes, token: str) -> bool:
     # secret = "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
-    secret = "6LdqbHUmAAAAAGD_XRty1ymYijks1OovWDfJ0nsI"
+    secret = "6LdGlBooAAAAAB4cV-PjV1Q1A-4261xHfTuqfmta"
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
     succ = res.json()["success"]
@@ -24,7 +24,7 @@ def v3_captcha_verify(user_id: bytes, token: str) -> bool:
     if cache.redis.sismember("captcha", user_id):
         return False
 
-    secret = "6LddwxooAAAAAHPau_7PA5MVJcgmZOTT19OMXLSk"
+    secret = "6LddwxooAAAAAJ1paREUji1g5PNX84pt45x73Afa"
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
     logger.info(res.json())
