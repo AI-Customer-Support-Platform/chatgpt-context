@@ -24,7 +24,7 @@ def v3_captcha_verify(user_id: bytes, token: str) -> bool:
     if cache.redis.sismember("captcha", user_id):
         return False
 
-    secret = "6Lc553QmAAAAAPbG_PoUw1SERkmWAgSnGqA1VatL"
+    secret = "6LddwxooAAAAAHPau_7PA5MVJcgmZOTT19OMXLSk"
     res = requests.post(f"https://www.google.com/recaptcha/api/siteverify?secret={secret}&response={token}")
 
     logger.info(res.json())
