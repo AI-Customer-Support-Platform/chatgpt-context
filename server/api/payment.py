@@ -1,6 +1,7 @@
 import os
 import stripe
 from datetime import datetime
+from datetime import timedelta
 from fastapi import (
     APIRouter,
     Depends,
@@ -49,6 +50,9 @@ async def create_checkout_session(
             mode="subscription",
             customer=stripe_user_id,
             metadata=metadata,
+            subscription_data={
+                "trial_end": datetime.now()+timedelta(days=5)
+            },
             line_items=[
                 {
                     "price": stripe_price_id,
@@ -159,13 +163,19 @@ async def stripe_webhook(
         crud.add_user_stripe_id(db, email, stripe_id)
 
     if event["type"] == "invoice.paid":
-        stripe_id = event_data["object"]["customer"]
-        price_id = event_data["object"]["lines"]["data"][0]["price"]["id"]
-        subscription_id = event_data["object"]["lines"]["data"][0]["subscription"]
+        try:
+            stripe_id = event_data["object"]["customer"]
+            price_id = event_data["object"]["lines"]["data"][0]["price"]["id"]
+            subscription_id = event_data["object"]["lines"]["data"][0]["subscription"]
+            start_at = datetime.fromtimestamp(event_data["object"]["lines"]["data"][0]["period"]["start"])
+            end_at = datetime.fromtimestamp(event_data["object"]["lines"]["data"][0]["period"]["end"])
 
-        cache.redis.delete(f"{stripe_id}::reach_limit")
+            cache.redis.delete(f"{stripe_id}::reach_limit")
 
-        crud.add_plan(db, stripe_id, price_id, subscription_id)
+            crud.add_plan(db, stripe_id, price_id, subscription_id, start_at, end_at)
+        except Exception as e:
+            event_id = event["id"]
+            logger.error(f"{event_id} Error: {e}")
     
     if event["type"] == "customer.subscription.updated":
         stripe_id = event_data["object"]["customer"]
