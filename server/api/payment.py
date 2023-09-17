@@ -51,7 +51,7 @@ async def create_checkout_session(
             customer=stripe_user_id,
             metadata=metadata,
             subscription_data={
-                "trial_end": datetime.now()+timedelta(days=5)
+                "trial_end": datetime.now()+timedelta(days=7)
             },
             line_items=[
                 {
