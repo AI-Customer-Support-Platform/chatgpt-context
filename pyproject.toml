@@ -6,7 +6,7 @@ authors = ["isafulf <isabella@openai.com>"]
 readme = "README.md"
 packages = [
   {include = "server"},
-  {include = "scripts/process_zip/*.py"},
+  {include = "scripts"},
 ]
 
 [[tool.poetry.source]]
