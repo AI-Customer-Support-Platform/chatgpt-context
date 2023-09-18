@@ -4,7 +4,10 @@ version = "0.1.0"
 description = ""
 authors = ["isafulf <isabella@openai.com>"]
 readme = "README.md"
-packages = [{include = "server"}]
+packages = [
+  {include = "server"},
+  {include = "scripts/process_zip/*.py"},
+]
 
 [[tool.poetry.source]]
 name = "azure-sdk-dev"
