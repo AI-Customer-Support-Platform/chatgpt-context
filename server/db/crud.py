@@ -169,7 +169,11 @@ def get_plan_config(db: Session, price_id: str) -> schemas.PlanConfig:
     return plan_config
 
 def get_price_id(db: Session, plan: SubscriptionType, platform: SubscriptionPlatform) -> str:
-    plan_config = db.query(models.PlanConfig).filter(models.PlanConfig.plan == plan.value, models.PlanConfig.platform == platform.value).first()
+    plan_config = db.query(models.PlanConfig).filter(
+        models.PlanConfig.plan == plan.value, 
+        models.PlanConfig.platform == platform.value,
+        models.PlanConfig.is_subscription == True
+    ).first()
     return plan_config.price_id
 
 def get_file_limit(db: Session, owner: str):

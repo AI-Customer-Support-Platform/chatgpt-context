@@ -35,7 +35,6 @@ async def create_checkout_session(
 ):
     crud.add_user(db, user_info["sub"], user_info["email"])
     stripe_price_id = crud.get_price_id(db, request.plan, request.api)
-    logger.debug(f"Stripe_price_id: {stripe_price_id}")
     stripe_user_id = crud.get_user_stripe_id(db, user_info["email"])
     callback_url = request.url
 
