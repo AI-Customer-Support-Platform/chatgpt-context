@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple
 import uuid
 import os
 from models.models import Document, DocumentChunk, DocumentChunkMetadata
+# from loguru import logger
 
 import tiktoken
 
@@ -135,8 +136,8 @@ def create_document_chunks(
     # Assign each chunk a sequential number and create a DocumentChunk object
     for i, text_chunk in enumerate(text_chunks):
         # chunk_id = f"{doc_id}_{i}"
-        chunk_id = str(uuid.uuid4())
-        if not doc_id:
+        if not doc.id:
+            chunk_id = str(uuid.uuid4())
             doc_chunk = DocumentChunk(
                 id=chunk_id,
                 text=text_chunk,
@@ -147,9 +148,9 @@ def create_document_chunks(
                 id=doc_id,
                 text=text_chunk,
                 metadata=metadata,
-                document_id=doc_id,
             )
         # Append the chunk object to the list of chunks for this document
+        # logger.debug(f"Add Chunks {i} - {doc_chunk.id}")
         doc_chunks.append(doc_chunk)
 
     # Return the list of chunks and the document id
@@ -179,7 +180,7 @@ def get_document_chunks(
     # Loop over each document and create chunks
     for doc in documents:
         doc_chunks, doc_id = create_document_chunks(doc, chunk_token_size)
-
+        # logger.debug(f"Doc_id: {doc_id}")
         # Append the chunks for this document to the list of all chunks
         all_chunks.extend(doc_chunks)
 

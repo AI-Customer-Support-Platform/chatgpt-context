@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 import asyncio
+from loguru import logger
 
 from models.models import (
     Document,
@@ -37,7 +38,7 @@ class DataStore(ABC):
         # )
         print(f"In datastore.py {collection_name}")
         chunks = get_document_chunks(documents, chunk_token_size)
-
+        # logger.debug(chunks.id)
         return await self._upsert(chunks, collection_name)
 
     @abstractmethod
